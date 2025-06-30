@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { storage } from '../../services/firebase.config';
 import { addFile } from '../../services/database';
 
@@ -12,6 +12,7 @@ const FileUpload = ({ onUploadSuccess }) => {
     year: '2024',
   });
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [showUpload, setShowUpload] = useState(false);
 
   const subjects = [
@@ -36,48 +37,79 @@ const FileUpload = ({ onUploadSuccess }) => {
       return;
     }
 
+    // File size validation (10MB limit)
+    if (file.size > 10 * 1024 * 1024) {
+      // 10MB limit
+      alert('File size exceeds the 10MB limit');
+      return;
+    }
+
     setUploading(true);
+    setUploadProgress(0);
+
     try {
-      // Upload file to Firebase Storage
       const timestamp = Date.now();
       const fileName = `${timestamp}_${file.name}`;
       const storageRef = ref(storage, `files/${fileName}`);
 
-      console.log('Uploading file to storage...');
-      const snapshot = await uploadBytes(storageRef, file);
-      const downloadURL = await getDownloadURL(snapshot.ref);
+      // Create upload task with progress tracking
+      const uploadTask = uploadBytesResumable(storageRef, file);
 
-      console.log('File uploaded, saving to database...');
-      // Save file info to Firestore, including the lowercase title
-      await addFile({
-        ...formData,
-        titleLowerCase: formData.title.toLowerCase(), // Add this line
-        downloadUrl: downloadURL,
-        fileName: file.name,
-        fileSize: file.size,
-      });
+      uploadTask.on(
+        'state_changed',
+        (snapshot) => {
+          // Progress tracking
+          const progress =
+            (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          setUploadProgress(Math.round(progress));
+        },
+        (error) => {
+          console.error('Upload error:', error);
+          alert(`Upload failed: ${error.message}`);
+          setUploading(false);
+          setUploadProgress(0);
+        },
+        async () => {
+          // Upload completed successfully
+          try {
+            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
 
-      alert('File uploaded successfully!');
+            // Save file info to Firestore
+            await addFile({
+              ...formData,
+              titleLowerCase: formData.title.toLowerCase(),
+              downloadUrl: downloadURL,
+              fileName: file.name,
+              fileSize: file.size,
+            });
 
-      // Reset form
-      setFile(null);
-      setFormData({
-        title: '',
-        subject: 'Applied Science',
-        domain: 'ASET',
-        year: '2024',
-      });
+            alert('File uploaded successfully!');
 
-      // Close upload form
-      setShowUpload(false);
+            // Reset form
+            setFile(null);
+            setFormData({
+              title: '',
+              subject: 'Applied Science',
+              domain: 'ASET',
+              year: '2024',
+            });
+            setUploadProgress(0);
+            setShowUpload(false);
 
-      // Trigger refresh of parent component
-      if (onUploadSuccess) onUploadSuccess();
+            if (onUploadSuccess) onUploadSuccess();
+          } catch (error) {
+            console.error('Database save error:', error);
+            alert(`Failed to save file info: ${error.message}`);
+          } finally {
+            setUploading(false);
+          }
+        }
+      );
     } catch (error) {
-      console.error('Upload error:', error);
+      console.error('Upload initialization error:', error);
       alert(`Upload failed: ${error.message}`);
-    } finally {
       setUploading(false);
+      setUploadProgress(0);
     }
   };
 
@@ -123,7 +155,10 @@ const FileUpload = ({ onUploadSuccess }) => {
       >
         <h3 style={{ color: '#2c3e50', margin: 0 }}>Upload New File</h3>
         <button
-          onClick={() => setShowUpload(false)}
+          onClick={() => {
+            setShowUpload(false);
+            setUploadProgress(0);
+          }}
           style={{
             padding: '5px 10px',
             backgroundColor: '#e74c3c',
@@ -136,6 +171,45 @@ const FileUpload = ({ onUploadSuccess }) => {
           Cancel
         </button>
       </div>
+
+      {/* Progress Bar */}
+      {uploading && (
+        <div style={{ marginBottom: '20px' }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              marginBottom: '5px',
+            }}
+          >
+            <span style={{ fontSize: '14px', color: '#2c3e50' }}>
+              Upload Progress
+            </span>
+            <span style={{ fontSize: '14px', color: '#2c3e50' }}>
+              {uploadProgress}%
+            </span>
+          </div>
+          <div
+            style={{
+              width: '100%',
+              height: '8px',
+              backgroundColor: '#ecf0f1',
+              borderRadius: '4px',
+              overflow: 'hidden',
+            }}
+          >
+            <div
+              style={{
+                width: `${uploadProgress}%`,
+                height: '100%',
+                backgroundColor: '#3498db',
+                transition: 'width 0.3s ease',
+                borderRadius: '4px',
+              }}
+            ></div>
+          </div>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '15px' }}>
         <div>
@@ -164,6 +238,7 @@ const FileUpload = ({ onUploadSuccess }) => {
               fontSize: '14px',
             }}
             required
+            disabled={uploading}
           />
         </div>
 
@@ -198,6 +273,7 @@ const FileUpload = ({ onUploadSuccess }) => {
                 fontSize: '14px',
               }}
               required
+              disabled={uploading}
             >
               {subjects.map((subject) => (
                 <option key={subject} value={subject}>
@@ -231,6 +307,7 @@ const FileUpload = ({ onUploadSuccess }) => {
                 fontSize: '14px',
               }}
               required
+              disabled={uploading}
             >
               <option value="ALLIED">ALLIED</option>
               <option value="ASET">ASET</option>
@@ -263,6 +340,7 @@ const FileUpload = ({ onUploadSuccess }) => {
                 fontSize: '14px',
               }}
               required
+              disabled={uploading}
             >
               <option value="2022">2022</option>
               <option value="2023">2023</option>
@@ -295,6 +373,7 @@ const FileUpload = ({ onUploadSuccess }) => {
               fontSize: '14px',
             }}
             required
+            disabled={uploading}
           />
           {file && (
             <p style={{ marginTop: '5px', fontSize: '12px', color: '#7f8c8d' }}>
@@ -317,7 +396,7 @@ const FileUpload = ({ onUploadSuccess }) => {
             fontWeight: 'bold',
           }}
         >
-          {uploading ? 'Uploading...' : 'Upload File'}
+          {uploading ? `Uploading... ${uploadProgress}%` : 'Upload File'}
         </button>
       </form>
     </div>

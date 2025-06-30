@@ -6,9 +6,13 @@ import {
   searchFiles,
   getRecentFiles,
   deleteFile,
+  getTotalFileCount,
 } from './services/database';
 import FileUpload from './components/admin/FileUpload';
 import Toast from './components/ui/Toast';
+import SearchBar from './components/ui/SearchBar';
+import Pagination from './components/ui/Pagination';
+import ErrorBoundary from './components/ui/ErrorBoundary';
 
 function App() {
   const [selectedSubject, setSelectedSubject] = useState('');
@@ -19,14 +23,29 @@ function App() {
   const [recentFiles, setRecentFiles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalFiles, setTotalFiles] = useState(0);
+  const [isSearchMode, setIsSearchMode] = useState(false);
 
-  // Load recent files on component mount
+  const ITEMS_PER_PAGE = 6;
+
+  // Load recent files and total count on component mount
   useEffect(() => {
     loadRecentFiles();
+    loadTotalCount();
   }, []);
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type, id: Date.now() });
+  };
+
+  const loadTotalCount = async () => {
+    try {
+      const count = await getTotalFileCount();
+      setTotalFiles(count);
+    } catch (error) {
+      console.error('Error loading total count:', error);
+    }
   };
 
   const loadRecentFiles = async () => {
@@ -41,6 +60,7 @@ function App() {
 
   const handleUploadSuccess = () => {
     loadRecentFiles();
+    loadTotalCount();
     showToast('File uploaded successfully!', 'success');
 
     // Refresh current view if any filter is active
@@ -57,9 +77,12 @@ function App() {
 
         // Refresh the current view
         loadRecentFiles();
+        loadTotalCount();
         if (selectedSubject) handleSubjectClick(selectedSubject);
         if (selectedDomain) handleDomainClick(selectedDomain);
         if (selectedYear) handleYearClick(selectedYear);
+        if (isSearchMode)
+          handleSearchResults(files.filter((f) => f.id !== fileId));
       } catch (error) {
         showToast('Error deleting file', 'error');
       }
@@ -70,6 +93,8 @@ function App() {
     setSelectedSubject(subject);
     setSelectedDomain('');
     setSelectedYear('');
+    setIsSearchMode(false);
+    setCurrentPage(1);
     setLoading(true);
 
     try {
@@ -89,6 +114,8 @@ function App() {
     setSelectedDomain(domain);
     setSelectedSubject('');
     setSelectedYear('');
+    setIsSearchMode(false);
+    setCurrentPage(1);
     setLoading(true);
 
     try {
@@ -111,6 +138,8 @@ function App() {
     setSelectedYear(year);
     setSelectedSubject('');
     setSelectedDomain('');
+    setIsSearchMode(false);
+    setCurrentPage(1);
     setLoading(true);
 
     try {
@@ -126,31 +155,14 @@ function App() {
     }
   };
 
-  const handleSearch = async () => {
-    if (!searchTerm.trim()) {
-      showToast('Please enter a search term', 'warning');
-      return;
-    }
-
-    setLoading(true);
+  const handleSearchResults = (results) => {
+    setFiles(results);
     setSelectedSubject('');
     setSelectedDomain('');
     setSelectedYear('');
-
-    try {
-      const searchResults = await searchFiles(searchTerm);
-      setFiles(searchResults);
-      showToast(
-        `Found ${searchResults.length} results for "${searchTerm}"`,
-        'info'
-      );
-    } catch (error) {
-      console.error('Error searching files:', error);
-      setFiles([]);
-      showToast('Error searching files', 'error');
-    } finally {
-      setLoading(false);
-    }
+    setIsSearchMode(true);
+    setCurrentPage(1);
+    showToast(`Found ${results.length} search results`, 'info');
   };
 
   const clearSelection = () => {
@@ -158,554 +170,568 @@ function App() {
     setSelectedDomain('');
     setSelectedYear('');
     setFiles([]);
+    setIsSearchMode(false);
+    setCurrentPage(1);
+    setSearchTerm('');
     showToast('Selection cleared', 'info');
   };
 
-  return (
-    <div
-      style={{
-        fontFamily: 'Arial, sans-serif',
-        minHeight: '100vh',
-        backgroundColor: '#f5f5f5',
-      }}
-    >
-      {/* Toast Notification */}
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(null)}
-        />
-      )}
+  // Pagination logic
+  const totalPages = Math.ceil(files.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const currentFiles = files.slice(startIndex, endIndex);
 
-      {/* Header */}
-      <header
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  return (
+    <ErrorBoundary>
+      <div
         style={{
-          backgroundColor: '#2c3e50',
-          color: 'white',
-          padding: '20px',
-          textAlign: 'center',
+          fontFamily: 'Arial, sans-serif',
+          minHeight: '100vh',
+          backgroundColor: '#f5f5f5',
         }}
       >
-        <h1 style={{ margin: 0 }}>AmityArchive</h1>
-        <p style={{ margin: '5px 0 0 0', fontSize: '14px', opacity: 0.8 }}>
-          Total Files: {recentFiles.length > 0 ? `${recentFiles.length}+` : '0'}{' '}
-          | Currently Showing: {files.length}
-        </p>
-      </header>
+        {/* Toast Notification */}
+        {toast && (
+          <Toast
+            message={toast.message}
+            type={toast.type}
+            onClose={() => setToast(null)}
+          />
+        )}
 
-      {/* Main Layout */}
-      <div style={{ display: 'flex', gap: '20px', padding: '20px' }}>
-        {/* Left Sidebar - Subjects */}
-        <aside
+        {/* Header */}
+        <header
           style={{
-            width: '250px',
-            backgroundColor: 'white',
+            backgroundColor: '#2c3e50',
+            color: 'white',
             padding: '20px',
-            borderRadius: '8px',
-            boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-            height: 'fit-content',
+            textAlign: 'center',
           }}
         >
-          <div>
-            <h3 style={{ color: '#2c3e50', marginBottom: '15px' }}>Subjects</h3>
-            <div
-              style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}
-            >
-              {[
-                'Applied Science',
-                'Commerce',
-                'Computer Science/IT',
-                'Engineering',
-                'English Literature',
-                'Fashion',
-                'Management',
-                'Skill Development',
-                'Social Science',
-                'Finance',
-                'Psychology & Behavioural Science',
-                'Pharmacy',
-              ].map((subject) => (
-                <button
-                  key={subject}
-                  onClick={() => handleSubjectClick(subject)}
-                  style={{
-                    padding: '10px',
-                    backgroundColor:
-                      selectedSubject === subject ? '#3498db' : '#ecf0f1',
-                    color: selectedSubject === subject ? 'white' : '#2c3e50',
-                    border: 'none',
-                    borderRadius: '5px',
-                    textAlign: 'left',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (selectedSubject !== subject) {
-                      e.target.style.backgroundColor = '#d5dbdb';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (selectedSubject !== subject) {
-                      e.target.style.backgroundColor = '#ecf0f1';
-                    }
-                  }}
-                >
-                  {subject}
-                </button>
-              ))}
-            </div>
-          </div>
-        </aside>
+          <h1 style={{ margin: 0 }}>AmityArchive</h1>
+          <p style={{ margin: '5px 0 0 0', fontSize: '14px', opacity: 0.8 }}>
+            Total Files: {totalFiles} | Currently Showing: {files.length}
+          </p>
+        </header>
 
-        {/* Main Content */}
-        <main
-          style={{
-            flex: 1,
-            backgroundColor: 'white',
-            padding: '30px',
-            borderRadius: '8px',
-            boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-            display: 'flex',
-            flexDirection: 'column',
-          }}
-        >
-          <div
+        {/* Main Layout */}
+        <div style={{ display: 'flex', gap: '20px', padding: '20px' }}>
+          {/* Left Sidebar - Subjects */}
+          <aside
             style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '10px',
+              width: '250px',
+              backgroundColor: 'white',
+              padding: '20px',
+              borderRadius: '8px',
+              boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+              height: 'fit-content',
             }}
           >
-            <h2 style={{ color: '#2c3e50', margin: 0 }}>
-              Welcome to AmityArchive
-            </h2>
-            {(selectedSubject || selectedDomain || selectedYear) && (
-              <button
-                onClick={clearSelection}
-                style={{
-                  padding: '8px 16px',
-                  backgroundColor: '#e74c3c',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                }}
-              >
-                Clear Selection
-              </button>
-            )}
-          </div>
-          <p style={{ color: '#7f8c8d', marginBottom: '30px' }}>
-            Your comprehensive resource for past exam papers and study materials
-          </p>
-
-          {/* File Upload Component */}
-          <FileUpload onUploadSuccess={handleUploadSuccess} />
-
-          {/* Search Bar */}
-          <div style={{ marginBottom: '30px' }}>
-            <div style={{ display: 'flex', gap: '10px', maxWidth: '600px' }}>
-              <input
-                type="text"
-                placeholder="Search for files..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                style={{
-                  flex: 1,
-                  padding: '12px',
-                  border: '2px solid #ecf0f1',
-                  borderRadius: '6px',
-                  fontSize: '16px',
-                }}
-              />
-              <button
-                onClick={handleSearch}
-                disabled={!searchTerm.trim()}
-                style={{
-                  padding: '12px 24px',
-                  backgroundColor: searchTerm.trim() ? '#3498db' : '#bdc3c7',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: searchTerm.trim() ? 'pointer' : 'not-allowed',
-                }}
-              >
-                Search
-              </button>
-            </div>
-          </div>
-
-          {/* Files Display Area */}
-          <div style={{ flex: 1, marginBottom: '30px' }}>
-            {loading ? (
+            <div>
+              <h3 style={{ color: '#2c3e50', marginBottom: '15px' }}>
+                Subjects
+              </h3>
               <div
-                style={{
-                  textAlign: 'center',
-                  padding: '40px',
-                  color: '#7f8c8d',
-                }}
+                style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}
               >
+                {[
+                  'Applied Science',
+                  'Commerce',
+                  'Computer Science/IT',
+                  'Engineering',
+                  'English Literature',
+                  'Fashion',
+                  'Management',
+                  'Skill Development',
+                  'Social Science',
+                  'Finance',
+                  'Psychology & Behavioural Science',
+                  'Pharmacy',
+                ].map((subject) => (
+                  <button
+                    key={subject}
+                    onClick={() => handleSubjectClick(subject)}
+                    style={{
+                      padding: '10px',
+                      backgroundColor:
+                        selectedSubject === subject ? '#3498db' : '#ecf0f1',
+                      color: selectedSubject === subject ? 'white' : '#2c3e50',
+                      border: 'none',
+                      borderRadius: '5px',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (selectedSubject !== subject) {
+                        e.target.style.backgroundColor = '#d5dbdb';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (selectedSubject !== subject) {
+                        e.target.style.backgroundColor = '#ecf0f1';
+                      }
+                    }}
+                  >
+                    {subject}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </aside>
+
+          {/* Main Content */}
+          <main
+            style={{
+              flex: 1,
+              backgroundColor: 'white',
+              padding: '30px',
+              borderRadius: '8px',
+              boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '10px',
+              }}
+            >
+              <h2 style={{ color: '#2c3e50', margin: 0 }}>
+                Welcome to AmityArchive
+              </h2>
+              {(selectedSubject ||
+                selectedDomain ||
+                selectedYear ||
+                isSearchMode) && (
+                <button
+                  onClick={clearSelection}
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: '#e74c3c',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Clear Selection
+                </button>
+              )}
+            </div>
+            <p style={{ color: '#7f8c8d', marginBottom: '30px' }}>
+              Your comprehensive resource for past exam papers and study
+              materials
+            </p>
+
+            {/* File Upload Component */}
+            <FileUpload onUploadSuccess={handleUploadSuccess} />
+
+            {/* Enhanced Search Bar */}
+            <SearchBar
+              onSearchResults={handleSearchResults}
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+            />
+
+            {/* Files Display Area */}
+            <div style={{ flex: 1, marginBottom: '30px' }}>
+              {loading ? (
                 <div
                   style={{
-                    width: '40px',
-                    height: '40px',
-                    border: '4px solid #ecf0f1',
-                    borderTop: '4px solid #3498db',
-                    borderRadius: '50%',
-                    animation: 'spin 1s linear infinite',
-                    margin: '0 auto 20px',
+                    textAlign: 'center',
+                    padding: '40px',
+                    color: '#7f8c8d',
                   }}
-                ></div>
-                <p>Loading files...</p>
-              </div>
-            ) : files.length > 0 ? (
+                >
+                  <div
+                    style={{
+                      width: '40px',
+                      height: '40px',
+                      border: '4px solid #ecf0f1',
+                      borderTop: '4px solid #3498db',
+                      borderRadius: '50%',
+                      animation: 'spin 1s linear infinite',
+                      margin: '0 auto 20px',
+                    }}
+                  ></div>
+                  <p>Loading files...</p>
+                </div>
+              ) : files.length > 0 ? (
+                <div>
+                  <h3 style={{ color: '#2c3e50', marginBottom: '20px' }}>
+                    {selectedSubject &&
+                      `${selectedSubject} Files (${files.length})`}
+                    {selectedDomain &&
+                      `${selectedDomain} Domain Files (${files.length})`}
+                    {selectedYear && `${selectedYear} Files (${files.length})`}
+                    {isSearchMode && `Search Results (${files.length})`}
+                  </h3>
+
+                  {/* File Grid */}
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns:
+                        'repeat(auto-fill, minmax(300px, 1fr))',
+                      gap: '20px',
+                    }}
+                  >
+                    {currentFiles.map((file) => (
+                      <div
+                        key={file.id}
+                        style={{
+                          backgroundColor: '#f8f9fa',
+                          padding: '20px',
+                          borderRadius: '8px',
+                          borderLeft: '4px solid #3498db',
+                          boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
+                          transition: 'transform 0.2s ease',
+                          cursor: 'pointer',
+                          position: 'relative',
+                        }}
+                        onMouseEnter={(e) =>
+                          (e.currentTarget.style.transform = 'translateY(-2px)')
+                        }
+                        onMouseLeave={(e) =>
+                          (e.currentTarget.style.transform = 'translateY(0)')
+                        }
+                      >
+                        {/* Delete Button */}
+                        <button
+                          onClick={() =>
+                            handleDeleteFile(
+                              file.id,
+                              file.downloadUrl,
+                              file.title
+                            )
+                          }
+                          style={{
+                            position: 'absolute',
+                            top: '10px',
+                            right: '10px',
+                            backgroundColor: '#e74c3c',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '50%',
+                            width: '25px',
+                            height: '25px',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          ×
+                        </button>
+
+                        <h4
+                          style={{
+                            margin: '0 0 10px 0',
+                            color: '#2c3e50',
+                            paddingRight: '30px',
+                          }}
+                        >
+                          {file.title}
+                        </h4>
+                        <p
+                          style={{
+                            margin: '0 0 5px 0',
+                            color: '#7f8c8d',
+                            fontSize: '14px',
+                          }}
+                        >
+                          Subject: {file.subject}
+                        </p>
+                        <p
+                          style={{
+                            margin: '0 0 5px 0',
+                            color: '#7f8c8d',
+                            fontSize: '14px',
+                          }}
+                        >
+                          Domain: {file.domain}
+                        </p>
+                        <p
+                          style={{
+                            margin: '0 0 15px 0',
+                            color: '#7f8c8d',
+                            fontSize: '14px',
+                          }}
+                        >
+                          Year: {file.year}
+                        </p>
+                        {file.downloadUrl && (
+                          <a
+                            href={file.downloadUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              display: 'inline-block',
+                              padding: '8px 16px',
+                              backgroundColor: '#3498db',
+                              color: 'white',
+                              textDecoration: 'none',
+                              borderRadius: '4px',
+                              fontSize: '14px',
+                              transition: 'background-color 0.3s ease',
+                            }}
+                            onMouseEnter={(e) =>
+                              (e.target.style.backgroundColor = '#2980b9')
+                            }
+                            onMouseLeave={(e) =>
+                              (e.target.style.backgroundColor = '#3498db')
+                            }
+                          >
+                            📄 Download PDF
+                          </a>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Pagination */}
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={handlePageChange}
+                    itemsPerPage={ITEMS_PER_PAGE}
+                    totalItems={files.length}
+                  />
+                </div>
+              ) : selectedSubject ||
+                selectedDomain ||
+                selectedYear ||
+                isSearchMode ? (
+                <div
+                  style={{
+                    textAlign: 'center',
+                    padding: '40px',
+                    color: '#7f8c8d',
+                  }}
+                >
+                  <div style={{ fontSize: '48px', marginBottom: '20px' }}>
+                    📚
+                  </div>
+                  <p>No files found for the selected criteria.</p>
+                  <p>
+                    Files will appear here once they are uploaded to the
+                    database.
+                  </p>
+                </div>
+              ) : (
+                <div style={{ textAlign: 'center', color: '#7f8c8d' }}>
+                  <div style={{ fontSize: '48px', marginBottom: '20px' }}>
+                    🎓
+                  </div>
+                  <p>
+                    Select a subject, domain, or year from the options to browse
+                    files
+                  </p>
+                  <p>Or use the search bar to find specific materials</p>
+                </div>
+              )}
+            </div>
+
+            {/* Domain and Year sections */}
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                marginTop: 'auto',
+                paddingTop: '30px',
+                borderTop: '1px solid #ecf0f1',
+                gap: '30px',
+              }}
+            >
+              {/* Domain Section */}
               <div>
-                <h3 style={{ color: '#2c3e50', marginBottom: '20px' }}>
-                  {selectedSubject &&
-                    `${selectedSubject} Files (${files.length})`}
-                  {selectedDomain &&
-                    `${selectedDomain} Domain Files (${files.length})`}
-                  {selectedYear && `${selectedYear} Files (${files.length})`}
-                  {!selectedSubject &&
-                    !selectedDomain &&
-                    !selectedYear &&
-                    `Search Results (${files.length})`}
+                <h3
+                  style={{
+                    color: '#2c3e50',
+                    marginBottom: '15px',
+                    textAlign: 'center',
+                  }}
+                >
+                  Domain
                 </h3>
                 <div
                   style={{
                     display: 'grid',
-                    gridTemplateColumns:
-                      'repeat(auto-fill, minmax(300px, 1fr))',
-                    gap: '20px',
+                    gridTemplateColumns: 'repeat(4, 1fr)',
+                    gap: '10px',
                   }}
                 >
-                  {files.map((file) => (
-                    <div
-                      key={file.id}
+                  {['ALLIED', 'ASET', 'MGMT', 'DIP'].map((domain) => (
+                    <button
+                      key={domain}
+                      onClick={() => handleDomainClick(domain)}
                       style={{
-                        backgroundColor: '#f8f9fa',
-                        padding: '20px',
-                        borderRadius: '8px',
-                        borderLeft: '4px solid #3498db',
-                        boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
-                        transition: 'transform 0.2s ease',
+                        padding: '12px 20px',
+                        backgroundColor:
+                          selectedDomain === domain ? '#2980b9' : '#3498db',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '5px',
                         cursor: 'pointer',
-                        position: 'relative',
+                        fontSize: '14px',
+                        fontWeight: 'bold',
+                        transition: 'all 0.3s ease',
                       }}
-                      onMouseEnter={(e) =>
-                        (e.currentTarget.style.transform = 'translateY(-2px)')
-                      }
-                      onMouseLeave={(e) =>
-                        (e.currentTarget.style.transform = 'translateY(0)')
-                      }
                     >
-                      {/* Delete Button */}
-                      <button
-                        onClick={() =>
-                          handleDeleteFile(
-                            file.id,
-                            file.downloadUrl,
-                            file.title
-                          )
-                        }
-                        style={{
-                          position: 'absolute',
-                          top: '10px',
-                          right: '10px',
-                          backgroundColor: '#e74c3c',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '50%',
-                          width: '25px',
-                          height: '25px',
-                          cursor: 'pointer',
-                          fontSize: '12px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        ×
-                      </button>
-
-                      <h4
-                        style={{
-                          margin: '0 0 10px 0',
-                          color: '#2c3e50',
-                          paddingRight: '30px',
-                        }}
-                      >
-                        {file.title}
-                      </h4>
-                      <p
-                        style={{
-                          margin: '0 0 5px 0',
-                          color: '#7f8c8d',
-                          fontSize: '14px',
-                        }}
-                      >
-                        Subject: {file.subject}
-                      </p>
-                      <p
-                        style={{
-                          margin: '0 0 5px 0',
-                          color: '#7f8c8d',
-                          fontSize: '14px',
-                        }}
-                      >
-                        Domain: {file.domain}
-                      </p>
-                      <p
-                        style={{
-                          margin: '0 0 15px 0',
-                          color: '#7f8c8d',
-                          fontSize: '14px',
-                        }}
-                      >
-                        Year: {file.year}
-                      </p>
-                      {file.downloadUrl && (
-                        <a
-                          href={file.downloadUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{
-                            display: 'inline-block',
-                            padding: '8px 16px',
-                            backgroundColor: '#3498db',
-                            color: 'white',
-                            textDecoration: 'none',
-                            borderRadius: '4px',
-                            fontSize: '14px',
-                            transition: 'background-color 0.3s ease',
-                          }}
-                          onMouseEnter={(e) =>
-                            (e.target.style.backgroundColor = '#2980b9')
-                          }
-                          onMouseLeave={(e) =>
-                            (e.target.style.backgroundColor = '#3498db')
-                          }
-                        >
-                          📄 Download PDF
-                        </a>
-                      )}
-                    </div>
+                      {domain}
+                    </button>
                   ))}
                 </div>
               </div>
-            ) : selectedSubject || selectedDomain || selectedYear ? (
-              <div
-                style={{
-                  textAlign: 'center',
-                  padding: '40px',
-                  color: '#7f8c8d',
-                }}
-              >
-                <div style={{ fontSize: '48px', marginBottom: '20px' }}>📚</div>
-                <p>No files found for the selected criteria.</p>
-                <p>
-                  Files will appear here once they are uploaded to the database.
-                </p>
-              </div>
-            ) : (
-              <div style={{ textAlign: 'center', color: '#7f8c8d' }}>
-                <div style={{ fontSize: '48px', marginBottom: '20px' }}>🎓</div>
-                <p>
-                  Select a subject, domain, or year from the options to browse
-                  files
-                </p>
-                <p>Or use the search bar to find specific materials</p>
-              </div>
-            )}
-          </div>
 
-          {/* Domain and Year sections */}
-          <div
+              {/* Year Section */}
+              <div>
+                <h3
+                  style={{
+                    color: '#2c3e50',
+                    marginBottom: '15px',
+                    textAlign: 'center',
+                  }}
+                >
+                  Year
+                </h3>
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(4, 1fr)',
+                    gap: '10px',
+                  }}
+                >
+                  {['2022', '2023', '2024', '2025'].map((year) => (
+                    <button
+                      key={year}
+                      onClick={() => handleYearClick(year)}
+                      style={{
+                        padding: '12px 20px',
+                        backgroundColor:
+                          selectedYear === year ? '#2980b9' : '#3498db',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '5px',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        fontWeight: 'bold',
+                        transition: 'all 0.3s ease',
+                      }}
+                    >
+                      {year}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </main>
+
+          {/* Right Sidebar - Recently Added */}
+          <aside
             style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              marginTop: 'auto',
-              paddingTop: '30px',
-              borderTop: '1px solid #ecf0f1',
-              gap: '30px',
+              width: '300px',
+              backgroundColor: 'white',
+              padding: '20px',
+              borderRadius: '8px',
+              boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+              height: 'fit-content',
             }}
           >
-            {/* Domain Section */}
-            <div>
-              <h3
-                style={{
-                  color: '#2c3e50',
-                  marginBottom: '15px',
-                  textAlign: 'center',
-                }}
-              >
-                Domain
-              </h3>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(4, 1fr)',
-                  gap: '10px',
-                }}
-              >
-                {['ALLIED', 'ASET', 'MGMT', 'DIP'].map((domain) => (
-                  <button
-                    key={domain}
-                    onClick={() => handleDomainClick(domain)}
+            <h3 style={{ color: '#2c3e50', marginBottom: '15px' }}>
+              Recently Added
+            </h3>
+            <div
+              style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}
+            >
+              {recentFiles.length > 0 ? (
+                recentFiles.map((file) => (
+                  <div
+                    key={file.id}
                     style={{
-                      padding: '12px 20px',
-                      backgroundColor:
-                        selectedDomain === domain ? '#2980b9' : '#3498db',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '5px',
+                      padding: '15px',
+                      backgroundColor: '#f8f9fa',
+                      borderRadius: '6px',
+                      borderLeft: '4px solid #3498db',
                       cursor: 'pointer',
-                      fontSize: '14px',
-                      fontWeight: 'bold',
-                      transition: 'all 0.3s ease',
+                      transition: 'transform 0.2s ease',
                     }}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.transform = 'translateX(5px)')
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.transform = 'translateX(0)')
+                    }
                   >
-                    {domain}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Year Section */}
-            <div>
-              <h3
-                style={{
-                  color: '#2c3e50',
-                  marginBottom: '15px',
-                  textAlign: 'center',
-                }}
-              >
-                Year
-              </h3>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(4, 1fr)',
-                  gap: '10px',
-                }}
-              >
-                {['2022', '2023', '2024', '2025'].map((year) => (
-                  <button
-                    key={year}
-                    onClick={() => handleYearClick(year)}
-                    style={{
-                      padding: '12px 20px',
-                      backgroundColor:
-                        selectedYear === year ? '#2980b9' : '#3498db',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '5px',
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                      fontWeight: 'bold',
-                      transition: 'all 0.3s ease',
-                    }}
-                  >
-                    {year}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </main>
-
-        {/* Right Sidebar - Recently Added */}
-        <aside
-          style={{
-            width: '300px',
-            backgroundColor: 'white',
-            padding: '20px',
-            borderRadius: '8px',
-            boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-            height: 'fit-content',
-          }}
-        >
-          <h3 style={{ color: '#2c3e50', marginBottom: '15px' }}>
-            Recently Added
-          </h3>
-          <div
-            style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}
-          >
-            {recentFiles.length > 0 ? (
-              recentFiles.map((file) => (
+                    <h4
+                      style={{
+                        margin: '0 0 8px 0',
+                        fontSize: '14px',
+                        color: '#2c3e50',
+                      }}
+                    >
+                      {file.title}
+                    </h4>
+                    <p
+                      style={{
+                        margin: '0 0 4px 0',
+                        fontSize: '12px',
+                        color: '#7f8c8d',
+                      }}
+                    >
+                      {file.subject} - {file.year}
+                    </p>
+                    <small style={{ fontSize: '11px', color: '#95a5a6' }}>
+                      {file.uploadedAt
+                        ? new Date(
+                            file.uploadedAt.toDate()
+                          ).toLocaleDateString()
+                        : 'Recently'}
+                    </small>
+                  </div>
+                ))
+              ) : (
                 <div
-                  key={file.id}
                   style={{
-                    padding: '15px',
-                    backgroundColor: '#f8f9fa',
-                    borderRadius: '6px',
-                    borderLeft: '4px solid #3498db',
-                    cursor: 'pointer',
-                    transition: 'transform 0.2s ease',
+                    textAlign: 'center',
+                    color: '#7f8c8d',
+                    fontSize: '14px',
                   }}
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.transform = 'translateX(5px)')
-                  }
-                  onMouseLeave={(e) =>
-                    (e.currentTarget.style.transform = 'translateX(0)')
-                  }
                 >
-                  <h4
-                    style={{
-                      margin: '0 0 8px 0',
-                      fontSize: '14px',
-                      color: '#2c3e50',
-                    }}
-                  >
-                    {file.title}
-                  </h4>
-                  <p
-                    style={{
-                      margin: '0 0 4px 0',
-                      fontSize: '12px',
-                      color: '#7f8c8d',
-                    }}
-                  >
-                    {file.subject} - {file.year}
+                  <div style={{ fontSize: '32px', marginBottom: '10px' }}>
+                    📁
+                  </div>
+                  <p>No files uploaded yet</p>
+                  <p style={{ fontSize: '12px' }}>
+                    Upload your first file to get started!
                   </p>
-                  <small style={{ fontSize: '11px', color: '#95a5a6' }}>
-                    {file.uploadedAt
-                      ? new Date(file.uploadedAt.toDate()).toLocaleDateString()
-                      : 'Recently'}
-                  </small>
                 </div>
-              ))
-            ) : (
-              <div
-                style={{
-                  textAlign: 'center',
-                  color: '#7f8c8d',
-                  fontSize: '14px',
-                }}
-              >
-                <div style={{ fontSize: '32px', marginBottom: '10px' }}>📁</div>
-                <p>No files uploaded yet</p>
-                <p style={{ fontSize: '12px' }}>
-                  Upload your first file to get started!
-                </p>
-              </div>
-            )}
-          </div>
-        </aside>
-      </div>
+              )}
+            </div>
+          </aside>
+        </div>
 
-      {/* Add CSS for spinner animation */}
-      <style>{`
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-      `}</style>
-    </div>
+        {/* Add CSS for spinner animation */}
+        <style>{`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    </ErrorBoundary>
   );
 }
 
