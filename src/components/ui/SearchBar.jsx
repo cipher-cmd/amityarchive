@@ -9,17 +9,18 @@ const SearchBar = ({ onSearchResults, searchTerm, setSearchTerm }) => {
   const [allFiles, setAllFiles] = useState([]);
   const searchRef = useRef(null);
 
-  // Load all files for autocomplete suggestions
+  // Load all files for autocomplete suggestions (optimize later)
   useEffect(() => {
     const loadAllFiles = async () => {
       try {
-        const q = query(collection(db, 'files'), limit(100));
+        const q = query(collection(db, 'files'), limit(50)); // You might want to fetch files as the user types instead
         const querySnapshot = await getDocs(q);
         const files = [];
         querySnapshot.forEach((doc) => {
           files.push({ id: doc.id, ...doc.data() });
         });
         setAllFiles(files);
+        console.log('Loaded files for autocomplete:', files.length);
       } catch (error) {
         console.error('Error loading files for autocomplete:', error);
       }
@@ -30,37 +31,41 @@ const SearchBar = ({ onSearchResults, searchTerm, setSearchTerm }) => {
 
   // Generate suggestions based on input
   useEffect(() => {
-    if (searchTerm.length > 1) {
-      const filteredSuggestions = allFiles
+    if (searchTerm && searchTerm.length > 1) {
+      const searchLower = searchTerm.toLowerCase();
+
+      // Get title suggestions
+      const titleSuggestions = allFiles
         .filter(
-          (file) =>
-            file.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            file.subject.toLowerCase().includes(searchTerm.toLowerCase())
+          (file) => file.title && file.title.toLowerCase().includes(searchLower)
         )
-        .slice(0, 5)
+        .slice(0, 3)
         .map((file) => ({
           text: file.title,
           type: 'title',
+          file: file,
         }));
 
-      // Add unique subjects that match
+      // Get unique subject suggestions
       const subjectSuggestions = [
         ...new Set(
           allFiles
-            .filter((file) =>
-              file.subject.toLowerCase().includes(searchTerm.toLowerCase())
+            .filter(
+              (file) =>
+                file.subject && file.subject.toLowerCase().includes(searchLower)
             )
             .map((file) => file.subject)
         ),
       ]
-        .slice(0, 3)
+        .slice(0, 2)
         .map((subject) => ({
           text: subject,
           type: 'subject',
         }));
 
-      setSuggestions([...filteredSuggestions, ...subjectSuggestions]);
-      setShowSuggestions(true);
+      const combinedSuggestions = [...titleSuggestions, ...subjectSuggestions];
+      setSuggestions(combinedSuggestions);
+      setShowSuggestions(combinedSuggestions.length > 0);
     } else {
       setSuggestions([]);
       setShowSuggestions(false);
@@ -75,26 +80,32 @@ const SearchBar = ({ onSearchResults, searchTerm, setSearchTerm }) => {
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('click', handleClickOutside); // Changed to 'click' instead of 'mousedown' for more reliability
+    return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
   const handleSearch = async (term = searchTerm) => {
-    if (!term.trim()) return;
+    if (!term || !term.trim()) return;
 
     setIsSearching(true);
     setShowSuggestions(false);
 
     try {
+      const searchLower = term.toLowerCase();
+
       // Filter files based on search term
       const results = allFiles.filter(
         (file) =>
-          file.title.toLowerCase().includes(term.toLowerCase()) ||
-          file.subject.toLowerCase().includes(term.toLowerCase()) ||
-          file.domain.toLowerCase().includes(term.toLowerCase())
+          (file.title && file.title.toLowerCase().includes(searchLower)) ||
+          (file.subject && file.subject.toLowerCase().includes(searchLower)) ||
+          (file.domain && file.domain.toLowerCase().includes(searchLower)) ||
+          (file.titleLowerCase && file.titleLowerCase.includes(searchLower))
       );
 
       onSearchResults(results);
+
+      // Close suggestions after the search
+      setShowSuggestions(false);
     } catch (error) {
       console.error('Search error:', error);
       onSearchResults([]);
@@ -105,12 +116,23 @@ const SearchBar = ({ onSearchResults, searchTerm, setSearchTerm }) => {
 
   const handleSuggestionClick = (suggestion) => {
     setSearchTerm(suggestion.text);
-    handleSearch(suggestion.text);
+    handleSearch(suggestion.text); // Trigger search immediately after selecting a suggestion
+    setShowSuggestions(false); // Close suggestions on selection
   };
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter') {
       handleSearch();
+    }
+  };
+
+  const handleInputChange = (e) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+
+    // Show suggestions when typing
+    if (value.length > 1) {
+      setShowSuggestions(true);
     }
   };
 
@@ -122,9 +144,11 @@ const SearchBar = ({ onSearchResults, searchTerm, setSearchTerm }) => {
             type="text"
             placeholder="Search for files, subjects, or domains..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={handleInputChange}
             onKeyPress={handleKeyPress}
-            onFocus={() => searchTerm.length > 1 && setShowSuggestions(true)}
+            onFocus={() =>
+              searchTerm && searchTerm.length > 1 && setShowSuggestions(true)
+            }
             style={{
               width: '100%',
               padding: '12px',
@@ -146,7 +170,7 @@ const SearchBar = ({ onSearchResults, searchTerm, setSearchTerm }) => {
                 backgroundColor: 'white',
                 border: '1px solid #ddd',
                 borderRadius: '6px',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                 zIndex: 1000,
                 maxHeight: '200px',
                 overflowY: 'auto',
@@ -166,6 +190,7 @@ const SearchBar = ({ onSearchResults, searchTerm, setSearchTerm }) => {
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px',
+                    backgroundColor: 'white',
                   }}
                   onMouseEnter={(e) =>
                     (e.target.style.backgroundColor = '#f8f9fa')
@@ -195,16 +220,20 @@ const SearchBar = ({ onSearchResults, searchTerm, setSearchTerm }) => {
 
         <button
           onClick={() => handleSearch()}
-          disabled={!searchTerm.trim() || isSearching}
+          disabled={!searchTerm || !searchTerm.trim() || isSearching}
           style={{
             padding: '12px 24px',
             backgroundColor:
-              searchTerm.trim() && !isSearching ? '#3498db' : '#bdc3c7',
+              searchTerm && searchTerm.trim() && !isSearching
+                ? '#3498db'
+                : '#bdc3c7',
             color: 'white',
             border: 'none',
             borderRadius: '6px',
             cursor:
-              searchTerm.trim() && !isSearching ? 'pointer' : 'not-allowed',
+              searchTerm && searchTerm.trim() && !isSearching
+                ? 'pointer'
+                : 'not-allowed',
             fontSize: '16px',
           }}
         >

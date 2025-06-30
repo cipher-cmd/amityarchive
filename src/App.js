@@ -27,7 +27,21 @@ function App() {
   const [totalFiles, setTotalFiles] = useState(0);
   const [isSearchMode, setIsSearchMode] = useState(false);
 
+  // Admin authentication state
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [showAdminLogin, setShowAdminLogin] = useState(false);
+  const [adminPassword, setAdminPassword] = useState('');
+
   const ITEMS_PER_PAGE = 6;
+  const ADMIN_PASSWORD = '@mity@rchive';
+
+  // Check for admin session on component mount
+  useEffect(() => {
+    const adminSession = localStorage.getItem('amityAdminAuth');
+    if (adminSession === 'true') {
+      setIsAdmin(true);
+    }
+  }, []);
 
   // Load recent files and total count on component mount
   useEffect(() => {
@@ -56,6 +70,26 @@ function App() {
       console.error('Error loading recent files:', error);
       showToast('Error loading recent files', 'error');
     }
+  };
+
+  // Admin authentication functions
+  const handleAdminLogin = () => {
+    if (adminPassword === ADMIN_PASSWORD) {
+      setIsAdmin(true);
+      localStorage.setItem('amityAdminAuth', 'true');
+      setShowAdminLogin(false);
+      setAdminPassword('');
+      showToast('Admin access granted!', 'success');
+    } else {
+      showToast('Invalid admin password', 'error');
+      setAdminPassword('');
+    }
+  };
+
+  const handleAdminLogout = () => {
+    setIsAdmin(false);
+    localStorage.removeItem('amityAdminAuth');
+    showToast('Admin logged out', 'info');
   };
 
   const handleUploadSuccess = () => {
@@ -91,9 +125,9 @@ function App() {
 
   const handleSubjectClick = async (subject) => {
     setSelectedSubject(subject);
+    setIsSearchMode(false);
     setSelectedDomain('');
     setSelectedYear('');
-    setIsSearchMode(false);
     setCurrentPage(1);
     setLoading(true);
 
@@ -112,9 +146,9 @@ function App() {
 
   const handleDomainClick = async (domain) => {
     setSelectedDomain(domain);
+    setIsSearchMode(false);
     setSelectedSubject('');
     setSelectedYear('');
-    setIsSearchMode(false);
     setCurrentPage(1);
     setLoading(true);
 
@@ -136,9 +170,9 @@ function App() {
 
   const handleYearClick = async (year) => {
     setSelectedYear(year);
+    setIsSearchMode(false);
     setSelectedSubject('');
     setSelectedDomain('');
-    setIsSearchMode(false);
     setCurrentPage(1);
     setLoading(true);
 
@@ -157,10 +191,10 @@ function App() {
 
   const handleSearchResults = (results) => {
     setFiles(results);
+    setIsSearchMode(true);
     setSelectedSubject('');
     setSelectedDomain('');
     setSelectedYear('');
-    setIsSearchMode(true);
     setCurrentPage(1);
     showToast(`Found ${results.length} search results`, 'info');
   };
@@ -205,6 +239,85 @@ function App() {
           />
         )}
 
+        {/* Admin Login Modal */}
+        {showAdminLogin && (
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0,0,0,0.8)',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              zIndex: 2000,
+            }}
+          >
+            <div
+              style={{
+                backgroundColor: 'white',
+                padding: '30px',
+                borderRadius: '8px',
+                width: '300px',
+                textAlign: 'center',
+              }}
+            >
+              <h3 style={{ marginBottom: '20px', color: '#2c3e50' }}>
+                Admin Access Required
+              </h3>
+              <input
+                type="password"
+                placeholder="Enter admin password"
+                value={adminPassword}
+                onChange={(e) => setAdminPassword(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleAdminLogin()}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  marginBottom: '15px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                }}
+              />
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  onClick={handleAdminLogin}
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    backgroundColor: '#3498db',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Login
+                </button>
+                <button
+                  onClick={() => {
+                    setShowAdminLogin(false);
+                    setAdminPassword('');
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    backgroundColor: '#e74c3c',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <header
           style={{
@@ -214,10 +327,75 @@ function App() {
             textAlign: 'center',
           }}
         >
-          <h1 style={{ margin: 0 }}>AmityArchive</h1>
-          <p style={{ margin: '5px 0 0 0', fontSize: '14px', opacity: 0.8 }}>
-            Total Files: {totalFiles} | Currently Showing: {files.length}
-          </p>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <div style={{ flex: 1 }}></div>
+            <div style={{ flex: 1 }}>
+              <h1 style={{ margin: 0 }}>AmityArchive</h1>
+              <p
+                style={{ margin: '5px 0 0 0', fontSize: '14px', opacity: 0.8 }}
+              >
+                Total Files: {totalFiles} | Currently Showing: {files.length}
+              </p>
+            </div>
+            <div style={{ flex: 1, textAlign: 'right' }}>
+              {isAdmin ? (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'flex-end',
+                    gap: '10px',
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: '12px',
+                      backgroundColor: '#27ae60',
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                    }}
+                  >
+                    Admin Mode
+                  </span>
+                  <button
+                    onClick={handleAdminLogout}
+                    style={{
+                      padding: '6px 12px',
+                      backgroundColor: '#e74c3c',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                    }}
+                  >
+                    Logout
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowAdminLogin(true)}
+                  style={{
+                    padding: '6px 12px',
+                    backgroundColor: '#34495e',
+                    color: 'white',
+                    border: '1px solid #7f8c8d',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                  }}
+                >
+                  Admin Login
+                </button>
+              )}
+            </div>
+          </div>
         </header>
 
         {/* Main Layout */}
@@ -333,8 +511,8 @@ function App() {
               materials
             </p>
 
-            {/* File Upload Component */}
-            <FileUpload onUploadSuccess={handleUploadSuccess} />
+            {/* File Upload Component - Only show for admins */}
+            {isAdmin && <FileUpload onUploadSuccess={handleUploadSuccess} />}
 
             {/* Enhanced Search Bar */}
             <SearchBar
@@ -406,40 +584,42 @@ function App() {
                           (e.currentTarget.style.transform = 'translateY(0)')
                         }
                       >
-                        {/* Delete Button */}
-                        <button
-                          onClick={() =>
-                            handleDeleteFile(
-                              file.id,
-                              file.downloadUrl,
-                              file.title
-                            )
-                          }
-                          style={{
-                            position: 'absolute',
-                            top: '10px',
-                            right: '10px',
-                            backgroundColor: '#e74c3c',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '50%',
-                            width: '25px',
-                            height: '25px',
-                            cursor: 'pointer',
-                            fontSize: '12px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                        >
-                          ×
-                        </button>
+                        {/* Delete Button - Only show for admins */}
+                        {isAdmin && (
+                          <button
+                            onClick={() =>
+                              handleDeleteFile(
+                                file.id,
+                                file.downloadUrl,
+                                file.title
+                              )
+                            }
+                            style={{
+                              position: 'absolute',
+                              top: '10px',
+                              right: '10px',
+                              backgroundColor: '#e74c3c',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '50%',
+                              width: '25px',
+                              height: '25px',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            ×
+                          </button>
+                        )}
 
                         <h4
                           style={{
                             margin: '0 0 10px 0',
                             color: '#2c3e50',
-                            paddingRight: '30px',
+                            paddingRight: isAdmin ? '30px' : '0',
                           }}
                         >
                           {file.title}
