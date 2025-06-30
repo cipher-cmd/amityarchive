@@ -48,9 +48,10 @@ const FileUpload = ({ onUploadSuccess }) => {
       const downloadURL = await getDownloadURL(snapshot.ref);
 
       console.log('File uploaded, saving to database...');
-      // Save file info to Firestore
+      // Save file info to Firestore, including the lowercase title
       await addFile({
         ...formData,
+        titleLowerCase: formData.title.toLowerCase(), // Add this line
         downloadUrl: downloadURL,
         fileName: file.name,
         fileSize: file.size,
