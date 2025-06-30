@@ -278,37 +278,7 @@ function App() {
           </div>
         )}
 
-        {/* Mobile Menu Button */}
-        <div className="lg:hidden fixed top-4 left-4 z-50">
-          <button
-            onClick={toggleMobileMenu}
-            className="bg-white p-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200"
-          >
-            <div className="w-6 h-6 flex flex-col justify-center items-center">
-              <span
-                className={`bg-gray-600 block transition-all duration-300 ease-out h-0.5 w-6 rounded-sm ${
-                  isMobileMenuOpen
-                    ? 'rotate-45 translate-y-1'
-                    : '-translate-y-0.5'
-                }`}
-              ></span>
-              <span
-                className={`bg-gray-600 block transition-all duration-300 ease-out h-0.5 w-6 rounded-sm my-0.5 ${
-                  isMobileMenuOpen ? 'opacity-0' : 'opacity-100'
-                }`}
-              ></span>
-              <span
-                className={`bg-gray-600 block transition-all duration-300 ease-out h-0.5 w-6 rounded-sm ${
-                  isMobileMenuOpen
-                    ? '-rotate-45 -translate-y-1'
-                    : 'translate-y-0.5'
-                }`}
-              ></span>
-            </div>
-          </button>
-        </div>
-
-        {/* Mobile Backdrop */}
+        {/* ✅ FIXED: Mobile Backdrop */}
         {isMobileMenuOpen && (
           <div
             className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
@@ -316,16 +286,50 @@ function App() {
           ></div>
         )}
 
-        {/* Header */}
+        {/* ✅ MODIFIED: Header with integrated mobile menu button */}
         <header className="bg-gradient-to-r from-primary-700 to-primary-800 text-white shadow-lg">
           <div className="flex justify-between items-center px-6 py-5">
-            <div className="flex-1"></div>
+            {/* ✅ NEW: Left side with mobile menu button */}
+            <div className="flex-1 flex justify-start">
+              <button
+                onClick={toggleMobileMenu}
+                className="lg:hidden inline-flex items-center justify-center p-2 rounded-md text-white hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
+              >
+                <span className="sr-only">Open main menu</span>
+                {/* ✅ NEW: Animated hamburger icon */}
+                <div className="w-6 h-6 flex flex-col justify-center items-center">
+                  <span
+                    className={`bg-white block transition-all duration-300 ease-out h-0.5 w-6 rounded-sm ${
+                      isMobileMenuOpen
+                        ? 'rotate-45 translate-y-1'
+                        : '-translate-y-0.5'
+                    }`}
+                  ></span>
+                  <span
+                    className={`bg-white block transition-all duration-300 ease-out h-0.5 w-6 rounded-sm my-0.5 ${
+                      isMobileMenuOpen ? 'opacity-0' : 'opacity-100'
+                    }`}
+                  ></span>
+                  <span
+                    className={`bg-white block transition-all duration-300 ease-out h-0.5 w-6 rounded-sm ${
+                      isMobileMenuOpen
+                        ? '-rotate-45 -translate-y-1'
+                        : 'translate-y-0.5'
+                    }`}
+                  ></span>
+                </div>
+              </button>
+            </div>
+
+            {/* Center title */}
             <div className="flex-1 text-center">
               <h1 className="text-3xl font-bold mb-1">AmityArchive</h1>
               <p className="text-sm text-primary-100 opacity-90">
                 Total Files: {totalFiles} | Currently Showing: {files.length}
               </p>
             </div>
+
+            {/* Right side admin */}
             <div className="flex-1 flex justify-end">
               {isAdmin ? (
                 <div className="flex items-center gap-3">
@@ -354,7 +358,7 @@ function App() {
 
         {/* Main Layout */}
         <div className="flex">
-          {/* Left Sidebar - Responsive */}
+          {/* ✅ MODIFIED: Left Sidebar - Responsive */}
           <aside
             className={`
             fixed lg:relative
@@ -375,7 +379,7 @@ function App() {
             }
           `}
           >
-            {/* Close button for mobile */}
+            {/* ✅ MODIFIED: Close button for mobile */}
             <div className="lg:hidden flex justify-between items-center mb-6 pb-4 border-b border-gray-200">
               <h3 className="text-lg font-semibold text-gray-800">Menu</h3>
               <button
@@ -426,8 +430,7 @@ function App() {
 
           {/* Main Content */}
           <main className="flex-1 bg-white m-5 p-6 lg:p-12 rounded-lg shadow-md flex flex-col">
-            {/* Mobile padding to avoid hamburger menu overlap */}
-            <div className="lg:hidden h-16"></div>
+            {/* ✅ REMOVED: Mobile padding - no longer needed */}
 
             {/* Header Section - Larger and center aligned */}
             <div className="text-left lg:text-center mb-12 max-w-4xl mx-auto w-full">
