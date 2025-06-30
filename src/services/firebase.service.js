@@ -1,20 +1,19 @@
 import { doc, deleteDoc } from 'firebase/firestore';
 import { ref, deleteObject } from 'firebase/storage';
-import { db, storage } from './firebase.config'; // Adjust the import path if necessary
+import { db, storage } from './firebase.config';
 
-// Function to delete file from Firestore and Firebase Storage
+// Delete file from both Firestore and Storage
 export const deleteFile = async (fileId, fileName) => {
   try {
-    // Delete file metadata from Firestore
+    // Remove from database
     const fileDocRef = doc(db, 'files', fileId);
     await deleteDoc(fileDocRef);
-    console.log('File metadata deleted from Firestore');
 
-    // Delete the actual file from Firebase Storage
+    // Remove from storage
     const fileRef = ref(storage, `files/${fileName}`);
     await deleteObject(fileRef);
-    console.log('File deleted from Firebase Storage');
   } catch (error) {
-    console.error('Error deleting file:', error);
+    console.error('Delete failed:', error);
+    throw error;
   }
 };
