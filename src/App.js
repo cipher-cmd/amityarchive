@@ -32,6 +32,9 @@ function App() {
   const [showAdminLogin, setShowAdminLogin] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
 
+  // Mobile responsive state
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
   const ITEMS_PER_PAGE = 6;
   const ADMIN_PASSWORD = '@mity@rchive';
 
@@ -70,6 +73,11 @@ function App() {
       console.error('Error loading recent files:', error);
       showToast('Error loading recent files', 'error');
     }
+  };
+
+  // Mobile menu toggle
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
   // Admin authentication functions
@@ -130,6 +138,7 @@ function App() {
     setSelectedYear('');
     setCurrentPage(1);
     setLoading(true);
+    setIsMobileMenuOpen(false); // Close mobile menu
 
     try {
       const subjectFiles = await getFilesBySubject(subject);
@@ -223,13 +232,7 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <div
-        style={{
-          fontFamily: 'Arial, sans-serif',
-          minHeight: '100vh',
-          backgroundColor: '#f5f5f5',
-        }}
-      >
+      <div className="min-h-screen bg-gray-50 font-sans">
         {/* Toast Notification */}
         {toast && (
           <Toast
@@ -241,30 +244,9 @@ function App() {
 
         {/* Admin Login Modal */}
         {showAdminLogin && (
-          <div
-            style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: 'rgba(0,0,0,0.8)',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              zIndex: 2000,
-            }}
-          >
-            <div
-              style={{
-                backgroundColor: 'white',
-                padding: '30px',
-                borderRadius: '8px',
-                width: '300px',
-                textAlign: 'center',
-              }}
-            >
-              <h3 style={{ marginBottom: '20px', color: '#2c3e50' }}>
+          <div className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50">
+            <div className="bg-white p-8 rounded-xl w-80 text-center shadow-2xl">
+              <h3 className="text-xl font-semibold text-gray-800 mb-6">
                 Admin Access Required
               </h3>
               <input
@@ -273,26 +255,12 @@ function App() {
                 value={adminPassword}
                 onChange={(e) => setAdminPassword(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleAdminLogin()}
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  marginBottom: '15px',
-                  border: '1px solid #ddd',
-                  borderRadius: '4px',
-                }}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               />
-              <div style={{ display: 'flex', gap: '10px' }}>
+              <div className="flex gap-3">
                 <button
                   onClick={handleAdminLogin}
-                  style={{
-                    flex: 1,
-                    padding: '10px',
-                    backgroundColor: '#3498db',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                  }}
+                  className="flex-1 bg-primary-500 hover:bg-primary-600 text-white py-3 rounded-lg font-medium transition-colors duration-200"
                 >
                   Login
                 </button>
@@ -301,15 +269,7 @@ function App() {
                     setShowAdminLogin(false);
                     setAdminPassword('');
                   }}
-                  style={{
-                    flex: 1,
-                    padding: '10px',
-                    backgroundColor: '#e74c3c',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                  }}
+                  className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-3 rounded-lg font-medium transition-colors duration-200"
                 >
                   Cancel
                 </button>
@@ -318,62 +278,63 @@ function App() {
           </div>
         )}
 
-        {/* Header */}
-        <header
-          style={{
-            backgroundColor: '#2c3e50',
-            color: 'white',
-            padding: '20px',
-            textAlign: 'center',
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}
+        {/* Mobile Menu Button */}
+        <div className="lg:hidden fixed top-4 left-4 z-50">
+          <button
+            onClick={toggleMobileMenu}
+            className="bg-white p-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200"
           >
-            <div style={{ flex: 1 }}></div>
-            <div style={{ flex: 1 }}>
-              <h1 style={{ margin: 0 }}>AmityArchive</h1>
-              <p
-                style={{ margin: '5px 0 0 0', fontSize: '14px', opacity: 0.8 }}
-              >
+            <div className="w-6 h-6 flex flex-col justify-center items-center">
+              <span
+                className={`bg-gray-600 block transition-all duration-300 ease-out h-0.5 w-6 rounded-sm ${
+                  isMobileMenuOpen
+                    ? 'rotate-45 translate-y-1'
+                    : '-translate-y-0.5'
+                }`}
+              ></span>
+              <span
+                className={`bg-gray-600 block transition-all duration-300 ease-out h-0.5 w-6 rounded-sm my-0.5 ${
+                  isMobileMenuOpen ? 'opacity-0' : 'opacity-100'
+                }`}
+              ></span>
+              <span
+                className={`bg-gray-600 block transition-all duration-300 ease-out h-0.5 w-6 rounded-sm ${
+                  isMobileMenuOpen
+                    ? '-rotate-45 -translate-y-1'
+                    : 'translate-y-0.5'
+                }`}
+              ></span>
+            </div>
+          </button>
+        </div>
+
+        {/* Mobile Backdrop */}
+        {isMobileMenuOpen && (
+          <div
+            className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
+            onClick={() => setIsMobileMenuOpen(false)}
+          ></div>
+        )}
+
+        {/* Header */}
+        <header className="bg-gradient-to-r from-primary-700 to-primary-800 text-white shadow-lg">
+          <div className="flex justify-between items-center px-6 py-5">
+            <div className="flex-1"></div>
+            <div className="flex-1 text-center">
+              <h1 className="text-3xl font-bold mb-1">AmityArchive</h1>
+              <p className="text-sm text-primary-100 opacity-90">
                 Total Files: {totalFiles} | Currently Showing: {files.length}
               </p>
             </div>
-            <div style={{ flex: 1, textAlign: 'right' }}>
+            <div className="flex-1 flex justify-end">
               {isAdmin ? (
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'flex-end',
-                    gap: '10px',
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: '12px',
-                      backgroundColor: '#27ae60',
-                      padding: '4px 8px',
-                      borderRadius: '4px',
-                    }}
-                  >
+                <div className="flex items-center gap-3">
+                  <span className="text-xs bg-success px-3 py-1 rounded-full font-medium">
                     Admin Mode
                   </span>
                   <button
                     onClick={handleAdminLogout}
-                    style={{
-                      padding: '6px 12px',
-                      backgroundColor: '#e74c3c',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      fontSize: '12px',
-                    }}
+                    className="bg-danger hover:bg-red-600 text-white px-3 py-1 rounded-lg text-xs font-medium transition-colors duration-200"
                   >
                     Logout
                   </button>
@@ -381,17 +342,10 @@ function App() {
               ) : (
                 <button
                   onClick={() => setShowAdminLogin(true)}
-                  style={{
-                    padding: '6px 12px',
-                    backgroundColor: '#34495e',
-                    color: 'white',
-                    border: '1px solid #7f8c8d',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                  }}
+                  className="bg-primary-600 hover:bg-primary-500 text-white px-2 py-1 lg:px-4 lg:py-2 rounded-lg text-xs lg:text-sm font-medium transition-all duration-200 border border-primary-500"
                 >
-                  Admin Login
+                  <span className="hidden sm:inline">Admin Login</span>
+                  <span className="sm:hidden">Admin</span>
                 </button>
               )}
             </div>
@@ -399,25 +353,44 @@ function App() {
         </header>
 
         {/* Main Layout */}
-        <div style={{ display: 'flex', gap: '20px', padding: '20px' }}>
-          {/* Left Sidebar - Subjects */}
+        <div className="flex">
+          {/* Left Sidebar - Responsive */}
           <aside
-            style={{
-              width: '250px',
-              backgroundColor: 'white',
-              padding: '20px',
-              borderRadius: '8px',
-              boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-              height: 'fit-content',
-            }}
+            className={`
+            fixed lg:relative
+            top-0 left-0
+            w-64 lg:w-64
+            h-full lg:h-auto
+            bg-white
+            p-5 lg:p-5
+            rounded-none lg:rounded-lg
+            shadow-2xl lg:shadow-md
+            z-50 lg:z-auto
+            transform transition-transform duration-300 ease-in-out
+            lg:m-5 lg:mt-5
+            ${
+              isMobileMenuOpen
+                ? 'translate-x-0'
+                : '-translate-x-full lg:translate-x-0'
+            }
+          `}
           >
+            {/* Close button for mobile */}
+            <div className="lg:hidden flex justify-between items-center mb-6 pb-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-800">Menu</h3>
+              <button
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+              >
+                <span className="text-xl text-gray-600">×</span>
+              </button>
+            </div>
+
             <div>
-              <h3 style={{ color: '#2c3e50', marginBottom: '15px' }}>
+              <h3 className="text-primary-700 font-semibold mb-4 text-lg">
                 Subjects
               </h3>
-              <div
-                style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}
-              >
+              <div className="space-y-2">
                 {[
                   'Applied Science',
                   'Commerce',
@@ -435,27 +408,14 @@ function App() {
                   <button
                     key={subject}
                     onClick={() => handleSubjectClick(subject)}
-                    style={{
-                      padding: '10px',
-                      backgroundColor:
-                        selectedSubject === subject ? '#3498db' : '#ecf0f1',
-                      color: selectedSubject === subject ? 'white' : '#2c3e50',
-                      border: 'none',
-                      borderRadius: '5px',
-                      textAlign: 'left',
-                      cursor: 'pointer',
-                      transition: 'all 0.3s ease',
-                    }}
-                    onMouseEnter={(e) => {
-                      if (selectedSubject !== subject) {
-                        e.target.style.backgroundColor = '#d5dbdb';
+                    className={`
+                      w-full p-3 rounded-lg text-left font-medium transition-all duration-200
+                      ${
+                        selectedSubject === subject
+                          ? 'bg-primary-500 text-white shadow-md'
+                          : 'text-gray-700 hover:bg-primary-50 hover:text-primary-600 hover:translate-x-1'
                       }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (selectedSubject !== subject) {
-                        e.target.style.backgroundColor = '#ecf0f1';
-                      }
-                    }}
+                    `}
                   >
                     {subject}
                   </button>
@@ -465,88 +425,74 @@ function App() {
           </aside>
 
           {/* Main Content */}
-          <main
-            style={{
-              flex: 1,
-              backgroundColor: 'white',
-              padding: '30px',
-              borderRadius: '8px',
-              boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-              display: 'flex',
-              flexDirection: 'column',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '10px',
-              }}
-            >
-              <h2 style={{ color: '#2c3e50', margin: 0 }}>
-                Welcome to AmityArchive
-              </h2>
-              {(selectedSubject ||
-                selectedDomain ||
-                selectedYear ||
-                isSearchMode) && (
-                <button
-                  onClick={clearSelection}
-                  style={{
-                    padding: '8px 16px',
-                    backgroundColor: '#e74c3c',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                  }}
-                >
-                  Clear Selection
-                </button>
-              )}
+          <main className="flex-1 bg-white m-5 p-6 lg:p-12 rounded-lg shadow-md flex flex-col">
+            {/* Mobile padding to avoid hamburger menu overlap */}
+            <div className="lg:hidden h-16"></div>
+
+            {/* Header Section - Larger and center aligned */}
+            <div className="text-left lg:text-center mb-12 max-w-4xl mx-auto w-full">
+              <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-4">
+                <h2 className="text-3xl lg:text-5xl font-bold text-gray-800 lg:flex-1 leading-tight">
+                  Welcome to AmityArchive
+                </h2>
+                {(selectedSubject ||
+                  selectedDomain ||
+                  selectedYear ||
+                  isSearchMode) && (
+                  <button
+                    onClick={clearSelection}
+                    className="bg-danger hover:bg-red-600 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200 lg:absolute lg:top-6 lg:right-12"
+                  >
+                    Clear Selection
+                  </button>
+                )}
+              </div>
+              <p className="text-gray-600 text-lg lg:text-xl mb-12 leading-relaxed max-w-3xl mx-auto">
+                Your comprehensive resource for past exam papers and study
+                materials
+              </p>
+
+              {/* File Upload Component - Only show for admins - Center aligned */}
+              <div className="flex justify-center mb-8">
+                {isAdmin && (
+                  <FileUpload onUploadSuccess={handleUploadSuccess} />
+                )}
+              </div>
+
+              {/* Enhanced Search Bar - Larger and center aligned */}
+              <div className="flex justify-center mb-12">
+                <div className="w-full max-w-2xl">
+                  <SearchBar
+                    onSearchResults={handleSearchResults}
+                    searchTerm={searchTerm}
+                    setSearchTerm={setSearchTerm}
+                  />
+                </div>
+              </div>
+
+              {/* Disclaimer */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8 text-sm text-blue-800">
+                <p className="leading-relaxed">
+                  <strong>Disclaimer:</strong> Amity Archive is an independent,
+                  student-run website created for educational purposes. It is
+                  not affiliated with or endorsed by Amity University or any of
+                  its departments. The materials available on this site are for
+                  the benefit of students and alumni and are intended for
+                  non-commercial use.
+                </p>
+              </div>
             </div>
-            <p style={{ color: '#7f8c8d', marginBottom: '30px' }}>
-              Your comprehensive resource for past exam papers and study
-              materials
-            </p>
-
-            {/* File Upload Component - Only show for admins */}
-            {isAdmin && <FileUpload onUploadSuccess={handleUploadSuccess} />}
-
-            {/* Enhanced Search Bar */}
-            <SearchBar
-              onSearchResults={handleSearchResults}
-              searchTerm={searchTerm}
-              setSearchTerm={setSearchTerm}
-            />
 
             {/* Files Display Area */}
-            <div style={{ flex: 1, marginBottom: '30px' }}>
+            <div className="flex-1 mb-8">
               {loading ? (
-                <div
-                  style={{
-                    textAlign: 'center',
-                    padding: '40px',
-                    color: '#7f8c8d',
-                  }}
-                >
-                  <div
-                    style={{
-                      width: '40px',
-                      height: '40px',
-                      border: '4px solid #ecf0f1',
-                      borderTop: '4px solid #3498db',
-                      borderRadius: '50%',
-                      animation: 'spin 1s linear infinite',
-                      margin: '0 auto 20px',
-                    }}
-                  ></div>
-                  <p>Loading files...</p>
+                <div className="text-center py-24 text-gray-500">
+                  <div className="w-12 h-12 border-4 border-gray-200 border-t-primary-500 rounded-full animate-spin mx-auto mb-6"></div>
+                  <p className="text-lg">Loading files...</p>
                 </div>
               ) : files.length > 0 ? (
                 <div>
-                  <h3 style={{ color: '#2c3e50', marginBottom: '20px' }}>
+                  <h3 className="text-2xl font-semibold text-gray-800 mb-8 text-center">
                     {selectedSubject &&
                       `${selectedSubject} Files (${files.length})`}
                     {selectedDomain &&
@@ -556,33 +502,11 @@ function App() {
                   </h3>
 
                   {/* File Grid */}
-                  <div
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns:
-                        'repeat(auto-fill, minmax(300px, 1fr))',
-                      gap: '20px',
-                    }}
-                  >
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
                     {currentFiles.map((file) => (
                       <div
                         key={file.id}
-                        style={{
-                          backgroundColor: '#f8f9fa',
-                          padding: '20px',
-                          borderRadius: '8px',
-                          borderLeft: '4px solid #3498db',
-                          boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
-                          transition: 'transform 0.2s ease',
-                          cursor: 'pointer',
-                          position: 'relative',
-                        }}
-                        onMouseEnter={(e) =>
-                          (e.currentTarget.style.transform = 'translateY(-2px)')
-                        }
-                        onMouseLeave={(e) =>
-                          (e.currentTarget.style.transform = 'translateY(0)')
-                        }
+                        className="group bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 border border-gray-100 p-6 relative hover:-translate-y-2"
                       >
                         {/* Delete Button - Only show for admins */}
                         {isAdmin && (
@@ -594,84 +518,37 @@ function App() {
                                 file.title
                               )
                             }
-                            style={{
-                              position: 'absolute',
-                              top: '10px',
-                              right: '10px',
-                              backgroundColor: '#e74c3c',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '50%',
-                              width: '25px',
-                              height: '25px',
-                              cursor: 'pointer',
-                              fontSize: '12px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                            }}
+                            className="absolute -top-2 -right-2 w-8 h-8 bg-danger text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-110"
                           >
                             ×
                           </button>
                         )}
 
-                        <h4
-                          style={{
-                            margin: '0 0 10px 0',
-                            color: '#2c3e50',
-                            paddingRight: isAdmin ? '30px' : '0',
-                          }}
-                        >
+                        <h4 className="text-lg font-semibold text-gray-800 mb-3 group-hover:text-primary-600 transition-colors duration-200">
                           {file.title}
                         </h4>
-                        <p
-                          style={{
-                            margin: '0 0 5px 0',
-                            color: '#7f8c8d',
-                            fontSize: '14px',
-                          }}
-                        >
-                          Subject: {file.subject}
-                        </p>
-                        <p
-                          style={{
-                            margin: '0 0 5px 0',
-                            color: '#7f8c8d',
-                            fontSize: '14px',
-                          }}
-                        >
-                          Domain: {file.domain}
-                        </p>
-                        <p
-                          style={{
-                            margin: '0 0 15px 0',
-                            color: '#7f8c8d',
-                            fontSize: '14px',
-                          }}
-                        >
-                          Year: {file.year}
-                        </p>
+
+                        <div className="space-y-2 mb-4">
+                          <p className="text-sm text-gray-600">
+                            <span className="font-medium">Subject:</span>{' '}
+                            {file.subject}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            <span className="font-medium">Domain:</span>{' '}
+                            {file.domain}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            <span className="font-medium">Year:</span>{' '}
+                            {file.year}
+                          </p>
+                        </div>
+
                         {file.downloadUrl && (
                           <a
                             href={file.downloadUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            style={{
-                              display: 'inline-block',
-                              padding: '8px 16px',
-                              backgroundColor: '#3498db',
-                              color: 'white',
-                              textDecoration: 'none',
-                              borderRadius: '4px',
-                              fontSize: '14px',
-                              transition: 'background-color 0.3s ease',
-                            }}
-                            onMouseEnter={(e) =>
-                              (e.target.style.backgroundColor = '#2980b9')
-                            }
-                            onMouseLeave={(e) =>
-                              (e.target.style.backgroundColor = '#3498db')
-                            }
+                            className="bg-primary-500 hover:bg-primary-600 text-white font-medium py-2 px-4 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 w-full text-center inline-block"
                           >
                             📄 Download PDF
                           </a>
@@ -681,94 +558,64 @@ function App() {
                   </div>
 
                   {/* Pagination */}
-                  <Pagination
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={handlePageChange}
-                    itemsPerPage={ITEMS_PER_PAGE}
-                    totalItems={files.length}
-                  />
+                  <div className="mt-12">
+                    <Pagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      onPageChange={handlePageChange}
+                      itemsPerPage={ITEMS_PER_PAGE}
+                      totalItems={files.length}
+                    />
+                  </div>
                 </div>
               ) : selectedSubject ||
                 selectedDomain ||
                 selectedYear ||
                 isSearchMode ? (
-                <div
-                  style={{
-                    textAlign: 'center',
-                    padding: '40px',
-                    color: '#7f8c8d',
-                  }}
-                >
-                  <div style={{ fontSize: '48px', marginBottom: '20px' }}>
-                    📚
-                  </div>
-                  <p>No files found for the selected criteria.</p>
-                  <p>
+                <div className="text-center py-24 text-gray-500">
+                  <div className="text-8xl mb-8">📚</div>
+                  <p className="text-xl mb-4">
+                    No files found for the selected criteria.
+                  </p>
+                  <p className="text-lg">
                     Files will appear here once they are uploaded to the
                     database.
                   </p>
                 </div>
               ) : (
-                <div style={{ textAlign: 'center', color: '#7f8c8d' }}>
-                  <div style={{ fontSize: '48px', marginBottom: '20px' }}>
-                    🎓
-                  </div>
-                  <p>
+                <div className="text-center py-24 text-gray-500">
+                  <div className="text-8xl mb-8">🎓</div>
+                  <p className="text-xl mb-4">
                     Select a subject, domain, or year from the options to browse
                     files
                   </p>
-                  <p>Or use the search bar to find specific materials</p>
+                  <p className="text-lg">
+                    Or use the search bar to find specific materials
+                  </p>
                 </div>
               )}
             </div>
 
-            {/* Domain and Year sections */}
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                marginTop: 'auto',
-                paddingTop: '30px',
-                borderTop: '1px solid #ecf0f1',
-                gap: '30px',
-              }}
-            >
+            {/* Domain and Year sections - Larger */}
+            <div className="flex flex-col items-center pt-12 border-t border-gray-200 space-y-12 max-w-4xl mx-auto w-full">
               {/* Domain Section */}
-              <div>
-                <h3
-                  style={{
-                    color: '#2c3e50',
-                    marginBottom: '15px',
-                    textAlign: 'center',
-                  }}
-                >
+              <div className="w-full">
+                <h3 className="text-2xl font-semibold text-gray-800 mb-6 text-center">
                   Domain
                 </h3>
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(4, 1fr)',
-                    gap: '10px',
-                  }}
-                >
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   {['ALLIED', 'ASET', 'MGMT', 'DIP'].map((domain) => (
                     <button
                       key={domain}
                       onClick={() => handleDomainClick(domain)}
-                      style={{
-                        padding: '12px 20px',
-                        backgroundColor:
-                          selectedDomain === domain ? '#2980b9' : '#3498db',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '5px',
-                        cursor: 'pointer',
-                        fontSize: '14px',
-                        fontWeight: 'bold',
-                        transition: 'all 0.3s ease',
-                      }}
+                      className={`
+                        py-4 px-8 rounded-lg font-semibold text-lg transition-all duration-200
+                        ${
+                          selectedDomain === domain
+                            ? 'bg-primary-600 text-white shadow-lg'
+                            : 'bg-primary-500 hover:bg-primary-600 text-white hover:shadow-lg'
+                        }
+                      `}
                     >
                       {domain}
                     </button>
@@ -777,39 +624,23 @@ function App() {
               </div>
 
               {/* Year Section */}
-              <div>
-                <h3
-                  style={{
-                    color: '#2c3e50',
-                    marginBottom: '15px',
-                    textAlign: 'center',
-                  }}
-                >
+              <div className="w-full">
+                <h3 className="text-2xl font-semibold text-gray-800 mb-6 text-center">
                   Year
                 </h3>
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(4, 1fr)',
-                    gap: '10px',
-                  }}
-                >
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   {['2022', '2023', '2024', '2025'].map((year) => (
                     <button
                       key={year}
                       onClick={() => handleYearClick(year)}
-                      style={{
-                        padding: '12px 20px',
-                        backgroundColor:
-                          selectedYear === year ? '#2980b9' : '#3498db',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '5px',
-                        cursor: 'pointer',
-                        fontSize: '14px',
-                        fontWeight: 'bold',
-                        transition: 'all 0.3s ease',
-                      }}
+                      className={`
+                        py-4 px-8 rounded-lg font-semibold text-lg transition-all duration-200
+                        ${
+                          selectedYear === year
+                            ? 'bg-primary-600 text-white shadow-lg'
+                            : 'bg-primary-500 hover:bg-primary-600 text-white hover:shadow-lg'
+                        }
+                      `}
                     >
                       {year}
                     </button>
@@ -819,61 +650,25 @@ function App() {
             </div>
           </main>
 
-          {/* Right Sidebar - Recently Added */}
-          <aside
-            style={{
-              width: '300px',
-              backgroundColor: 'white',
-              padding: '20px',
-              borderRadius: '8px',
-              boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-              height: 'fit-content',
-            }}
-          >
-            <h3 style={{ color: '#2c3e50', marginBottom: '15px' }}>
+          {/* Right Sidebar - Hide on mobile, show on larger screens */}
+          <aside className="hidden lg:block w-80 bg-white m-5 p-6 rounded-lg shadow-md h-fit">
+            <h3 className="text-xl font-semibold text-gray-800 mb-4">
               Recently Added
             </h3>
-            <div
-              style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}
-            >
+            <div className="space-y-4">
               {recentFiles.length > 0 ? (
                 recentFiles.map((file) => (
                   <div
                     key={file.id}
-                    style={{
-                      padding: '15px',
-                      backgroundColor: '#f8f9fa',
-                      borderRadius: '6px',
-                      borderLeft: '4px solid #3498db',
-                      cursor: 'pointer',
-                      transition: 'transform 0.2s ease',
-                    }}
-                    onMouseEnter={(e) =>
-                      (e.currentTarget.style.transform = 'translateX(5px)')
-                    }
-                    onMouseLeave={(e) =>
-                      (e.currentTarget.style.transform = 'translateX(0)')
-                    }
+                    className="p-4 bg-gray-50 rounded-lg border-l-4 border-primary-500 cursor-pointer transition-transform duration-200 hover:translate-x-1"
                   >
-                    <h4
-                      style={{
-                        margin: '0 0 8px 0',
-                        fontSize: '14px',
-                        color: '#2c3e50',
-                      }}
-                    >
+                    <h4 className="font-medium text-gray-800 text-sm mb-2">
                       {file.title}
                     </h4>
-                    <p
-                      style={{
-                        margin: '0 0 4px 0',
-                        fontSize: '12px',
-                        color: '#7f8c8d',
-                      }}
-                    >
+                    <p className="text-xs text-gray-600 mb-1">
                       {file.subject} - {file.year}
                     </p>
-                    <small style={{ fontSize: '11px', color: '#95a5a6' }}>
+                    <small className="text-xs text-gray-500">
                       {file.uploadedAt
                         ? new Date(
                             file.uploadedAt.toDate()
@@ -883,18 +678,10 @@ function App() {
                   </div>
                 ))
               ) : (
-                <div
-                  style={{
-                    textAlign: 'center',
-                    color: '#7f8c8d',
-                    fontSize: '14px',
-                  }}
-                >
-                  <div style={{ fontSize: '32px', marginBottom: '10px' }}>
-                    📁
-                  </div>
-                  <p>No files uploaded yet</p>
-                  <p style={{ fontSize: '12px' }}>
+                <div className="text-center text-gray-500 py-8">
+                  <div className="text-4xl mb-3">📁</div>
+                  <p className="text-sm mb-1">No files uploaded yet</p>
+                  <p className="text-xs">
                     Upload your first file to get started!
                   </p>
                 </div>
@@ -902,14 +689,6 @@ function App() {
             </div>
           </aside>
         </div>
-
-        {/* Add CSS for spinner animation */}
-        <style>{`
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `}</style>
       </div>
     </ErrorBoundary>
   );
