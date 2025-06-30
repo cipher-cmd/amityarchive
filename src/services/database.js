@@ -6,8 +6,11 @@ import {
   where,
   orderBy,
   serverTimestamp,
+  doc,
+  deleteDoc,
 } from 'firebase/firestore';
-import { db } from './firebase.config';
+import { ref, deleteObject } from 'firebase/storage';
+import { db, storage } from './firebase.config';
 
 // Add a new file to the database
 export const addFile = async (fileData) => {
@@ -116,6 +119,25 @@ export const getRecentFiles = async (limit = 10) => {
     return files.slice(0, limit);
   } catch (error) {
     console.error('Error getting recent files:', error);
+    throw error;
+  }
+};
+
+// Add this function to delete files
+export const deleteFile = async (fileId, downloadUrl) => {
+  try {
+    // Delete from Firestore
+    await deleteDoc(doc(db, 'files', fileId));
+
+    // Delete from Storage
+    if (downloadUrl) {
+      const fileRef = ref(storage, downloadUrl);
+      await deleteObject(fileRef);
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error deleting file:', error);
     throw error;
   }
 };
