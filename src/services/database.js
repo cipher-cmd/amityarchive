@@ -83,13 +83,14 @@ export const getFilesByYear = async (year) => {
   }
 };
 
-// Search files
+// Update the searchFiles function
 export const searchFiles = async (searchTerm) => {
   try {
+    const searchTermLower = searchTerm.toLowerCase();
     const q = query(
       collection(db, 'files'),
-      where('title', '>=', searchTerm),
-      where('title', '<=', searchTerm + '\uf8ff')
+      where('titleLowerCase', '>=', searchTermLower),
+      where('titleLowerCase', '<=', searchTermLower + '\uf8ff')
     );
     const querySnapshot = await getDocs(q);
     const files = [];
