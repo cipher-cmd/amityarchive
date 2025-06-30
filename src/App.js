@@ -5,6 +5,7 @@ import {
   getFilesByYear,
   searchFiles,
   getRecentFiles,
+  deleteFile,
 } from './services/database';
 import FileUpload from './components/admin/FileUpload';
 import Toast from './components/ui/Toast';
@@ -46,6 +47,23 @@ function App() {
     if (selectedSubject) handleSubjectClick(selectedSubject);
     if (selectedDomain) handleDomainClick(selectedDomain);
     if (selectedYear) handleYearClick(selectedYear);
+  };
+
+  const handleDeleteFile = async (fileId, downloadUrl, fileName) => {
+    if (window.confirm(`Are you sure you want to delete "${fileName}"?`)) {
+      try {
+        await deleteFile(fileId, downloadUrl);
+        showToast('File deleted successfully!', 'success');
+
+        // Refresh the current view
+        loadRecentFiles();
+        if (selectedSubject) handleSubjectClick(selectedSubject);
+        if (selectedDomain) handleDomainClick(selectedDomain);
+        if (selectedYear) handleYearClick(selectedYear);
+      } catch (error) {
+        showToast('Error deleting file', 'error');
+      }
+    }
   };
 
   const handleSubjectClick = async (subject) => {
@@ -375,15 +393,51 @@ function App() {
                         boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
                         transition: 'transform 0.2s ease',
                         cursor: 'pointer',
+                        position: 'relative',
                       }}
                       onMouseEnter={(e) =>
-                        (e.target.style.transform = 'translateY(-2px)')
+                        (e.currentTarget.style.transform = 'translateY(-2px)')
                       }
                       onMouseLeave={(e) =>
-                        (e.target.style.transform = 'translateY(0)')
+                        (e.currentTarget.style.transform = 'translateY(0)')
                       }
                     >
-                      <h4 style={{ margin: '0 0 10px 0', color: '#2c3e50' }}>
+                      {/* Delete Button */}
+                      <button
+                        onClick={() =>
+                          handleDeleteFile(
+                            file.id,
+                            file.downloadUrl,
+                            file.title
+                          )
+                        }
+                        style={{
+                          position: 'absolute',
+                          top: '10px',
+                          right: '10px',
+                          backgroundColor: '#e74c3c',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '50%',
+                          width: '25px',
+                          height: '25px',
+                          cursor: 'pointer',
+                          fontSize: '12px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        ×
+                      </button>
+
+                      <h4
+                        style={{
+                          margin: '0 0 10px 0',
+                          color: '#2c3e50',
+                          paddingRight: '30px',
+                        }}
+                      >
                         {file.title}
                       </h4>
                       <p
@@ -594,10 +648,10 @@ function App() {
                     transition: 'transform 0.2s ease',
                   }}
                   onMouseEnter={(e) =>
-                    (e.target.style.transform = 'translateX(5px)')
+                    (e.currentTarget.style.transform = 'translateX(5px)')
                   }
                   onMouseLeave={(e) =>
-                    (e.target.style.transform = 'translateX(0)')
+                    (e.currentTarget.style.transform = 'translateX(0)')
                   }
                 >
                   <h4
