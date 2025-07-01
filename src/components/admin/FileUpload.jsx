@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { storage } from '../../services/firebase.config';
+import { signInAnonymously } from 'firebase/auth';
+import { storage, auth } from '../../services/firebase.config';
 import { addFile } from '../../services/database';
 
 const FileUpload = ({ onUploadSuccess }) => {
@@ -14,6 +15,7 @@ const FileUpload = ({ onUploadSuccess }) => {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [showUpload, setShowUpload] = useState(false);
+  const [error, setError] = useState('');
 
   const subjects = [
     'Applied Science',
@@ -30,24 +32,47 @@ const FileUpload = ({ onUploadSuccess }) => {
     'Pharmacy',
   ];
 
+  // Authenticate user before upload (TEMPORARILY DISABLED)
+  const authenticateUser = async () => {
+    try {
+      if (!auth.currentUser) {
+        await signInAnonymously(auth);
+        console.log('User authenticated anonymously');
+      }
+    } catch (error) {
+      console.error('Authentication failed:', error);
+      // Don't throw error for now - let upload proceed
+      console.warn('Proceeding without authentication');
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!file || !formData.title.trim()) {
-      alert('Please fill in all fields and select a file');
+      setError('Please fill in all fields and select a file');
+      return;
+    }
+
+    // File type validation
+    if (file.type !== 'application/pdf') {
+      setError('Please select a PDF file only');
       return;
     }
 
     // File size validation (10MB limit)
     if (file.size > 10 * 1024 * 1024) {
-      // 10MB limit
-      alert('File size exceeds the 10MB limit');
+      setError('File size exceeds the 10MB limit');
       return;
     }
 
     setUploading(true);
     setUploadProgress(0);
+    setError('');
 
     try {
+      // TEMPORARILY COMMENT OUT AUTHENTICATION
+      // await authenticateUser();
+
       const timestamp = Date.now();
       const fileName = `${timestamp}_${file.name}`;
       const storageRef = ref(storage, `files/${fileName}`);
@@ -65,7 +90,7 @@ const FileUpload = ({ onUploadSuccess }) => {
         },
         (error) => {
           console.error('Upload error:', error);
-          alert(`Upload failed: ${error.message}`);
+          setError(`Upload failed: ${error.message}`);
           setUploading(false);
           setUploadProgress(0);
         },
@@ -83,6 +108,8 @@ const FileUpload = ({ onUploadSuccess }) => {
               fileSize: file.size,
             });
 
+            // Success notification
+            setError('');
             alert('File uploaded successfully!');
 
             // Reset form
@@ -99,7 +126,7 @@ const FileUpload = ({ onUploadSuccess }) => {
             if (onUploadSuccess) onUploadSuccess();
           } catch (error) {
             console.error('Database save error:', error);
-            alert(`Failed to save file info: ${error.message}`);
+            setError(`Failed to save file info: ${error.message}`);
           } finally {
             setUploading(false);
           }
@@ -107,7 +134,7 @@ const FileUpload = ({ onUploadSuccess }) => {
       );
     } catch (error) {
       console.error('Upload initialization error:', error);
-      alert(`Upload failed: ${error.message}`);
+      setError(`Upload failed: ${error.message}`);
       setUploading(false);
       setUploadProgress(0);
     }
@@ -158,6 +185,7 @@ const FileUpload = ({ onUploadSuccess }) => {
           onClick={() => {
             setShowUpload(false);
             setUploadProgress(0);
+            setError('');
           }}
           style={{
             padding: '5px 10px',
@@ -171,6 +199,22 @@ const FileUpload = ({ onUploadSuccess }) => {
           Cancel
         </button>
       </div>
+
+      {/* Error Display */}
+      {error && (
+        <div
+          style={{
+            backgroundColor: '#f8d7da',
+            color: '#721c24',
+            padding: '10px',
+            borderRadius: '4px',
+            marginBottom: '15px',
+            border: '1px solid #f5c6cb',
+          }}
+        >
+          {error}
+        </div>
+      )}
 
       {/* Progress Bar */}
       {uploading && (
@@ -364,7 +408,10 @@ const FileUpload = ({ onUploadSuccess }) => {
           <input
             type="file"
             accept=".pdf"
-            onChange={(e) => setFile(e.target.files[0])}
+            onChange={(e) => {
+              setFile(e.target.files[0]);
+              setError(''); // Clear error when new file is selected
+            }}
             style={{
               width: '100%',
               padding: '10px',
