@@ -3,7 +3,7 @@ import {
   getFilesBySubject,
   getFilesByDomain,
   getFilesByYear,
-  // searchFiles,
+  searchFiles,
   getRecentFiles,
   deleteFile,
   getTotalFileCount,
@@ -49,7 +49,8 @@ function App() {
   // Load recent files and total count on component mount
   useEffect(() => {
     loadRecentFiles();
-  }, [loadRecentFiles]);
+    loadTotalCount();
+  }, []);
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type, id: Date.now() });
