@@ -32,19 +32,18 @@ const FileUpload = ({ onUploadSuccess }) => {
     'Pharmacy',
   ];
 
-  // Authenticate user before upload (TEMPORARILY DISABLED)
-  const authenticateUser = async () => {
-    try {
-      if (!auth.currentUser) {
-        await signInAnonymously(auth);
-        console.log('User authenticated anonymously');
-      }
-    } catch (error) {
-      console.error('Authentication failed:', error);
-      // Don't throw error for now - let upload proceed
-      console.warn('Proceeding without authentication');
-    }
-  };
+  // const authenticateUser = async () => {
+  //   try {
+  //     if (!auth.currentUser) {
+  //       await signInAnonymously(auth);
+  //       console.log('User authenticated anonymously');
+  //     }
+  //   } catch (error) {
+  //     console.error('Authentication failed:', error);
+  //     // Don't throw error for now - let upload proceed
+  //     console.warn('Proceeding without authentication');
+  //   }
+  // };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
