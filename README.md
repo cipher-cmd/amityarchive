@@ -1,70 +1,39 @@
-# Getting Started with Create React App
+While studying for my exam recently, I found that professors only had old question papers and my seniors were unable to provide new ones. I wanted to address a problem that I saw as a gap. I'm creating a platform to consolidate these resources and address this issue for future students with the support of my robust college network. My enthusiasm for applying web programming to concrete, real-world issues is evident in this effort.
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+        Amity Archive
 
-## Available Scripts
+Amity Archive is a student resource platform that collects and organizes old question papers, study materials, and exam resources to help students prepare better for their exams.
 
-In the project directory, you can run:
+        What It Does
 
-### `npm start`
+Brings together question papers from different years and subjects in one place
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+Makes it easy for students to find past exam papers when studying
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+Lets students share and upload their own question papers to help others
 
-### `npm test`
+Organizes materials by subject, year, and exam type for quick searching
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+Builds a growing collection of study resources with help from students
 
-### `npm run build`
+Works on phones, tablets, and computers with a simple and clean design
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+Keeps all uploaded materials safe and organized for easy access
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+        Technologies Used
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+Framework: [Your web framework]
 
-### `npm run eject`
+Language: [Programming language used]
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+Database: [Database technology]
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+Storage: [File storage solution]
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+Website Hosting: [Hosting platform]
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+        The Goal
 
-## Learn More
+This project combines my interest in web development with solving real problems that students face during exam preparation. By creating this platform, I want to make studying more effective and organized for everyone in my college community and help future students access the resources they need.
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+Perfect for students who want access to a complete collection of study materials and question papers all in one organized place.
