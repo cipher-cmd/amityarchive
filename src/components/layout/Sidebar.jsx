@@ -1,89 +1,39 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../ui/Button';
+// We only need COURSES now
+import { COURSES } from '../../constants';
 
 const Sidebar = () => {
   const navigate = useNavigate();
 
-  const subjects = [
-    'Applied Science',
-    'Commerce',
-    'Computer Science/IT',
-    'Engineering',
-    'English Literature',
-    'Fashion',
-    'Management',
-    'Skill Development',
-    'Social Science',
-    'Finance',
-    'Psychology & Behavioural Science',
-    'Pharmacy',
-  ];
-
-  const domains = [
-    { name: 'ALLIED', path: '/domain/allied' },
-    { name: 'ASET', path: '/domain/aset' },
-    { name: 'MGMT', path: '/domain/mgmt' },
-    { name: 'DIP', path: '/domain/dip' },
-  ];
-
-  const years = ['2022', '2023', '2024', '2025'];
-
-  const handleSubjectClick = (subject) => {
-    navigate(`/subject/${subject.toLowerCase().replace(/[^a-z0-9]/g, '-')}`);
+  const handleCourseClick = (course) => {
+    navigate(
+      `/subject/${course.toLowerCase().replace(/ /g, '-').replace(/\./g, '')}`
+    );
   };
 
-  const handleDomainClick = (domain) => {
-    navigate(domain.path);
-  };
-
-  const handleYearClick = (year) => {
-    navigate(`/year/${year}`);
-  };
+  const sidebarButtonStyles =
+    'text-gray-700 hover:bg-gray-100 hover:text-gray-900';
 
   return (
-    <aside className="sidebar">
-      <div className="sidebar-section">
-        <h3>Subjects</h3>
-        <div className="button-list">
-          {subjects.map((subject) => (
+    // The sidebar now only contains the courses section
+    <aside className="w-full lg:w-64 bg-white p-6 rounded-lg shadow-md h-fit">
+      <div className="mb-8">
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">Courses</h3>
+        <div className="space-y-2">
+          {COURSES.map((course) => (
             <Button
-              key={subject}
-              title={subject}
-              onClick={() => handleSubjectClick(subject)}
-              variant="sidebar"
+              key={course}
+              title={course}
+              onClick={() => handleCourseClick(course)}
+              variant="ghost" // Use a more subtle variant for navigation
+              className={sidebarButtonStyles}
             />
           ))}
         </div>
       </div>
-
-      <div className="sidebar-section">
-        <h3>Domain</h3>
-        <div className="domain-buttons">
-          {domains.map((domain) => (
-            <Button
-              key={domain.name}
-              title={domain.name}
-              onClick={() => handleDomainClick(domain)}
-              variant="domain"
-            />
-          ))}
-        </div>
-      </div>
-
-      <div className="sidebar-section">
-        <h3>Year</h3>
-        <div className="year-buttons">
-          {years.map((year) => (
-            <Button
-              key={year}
-              title={year}
-              onClick={() => handleYearClick(year)}
-              variant="year"
-            />
-          ))}
-        </div>
-      </div>
+      {/* The Domain and Year sections have been removed */}
     </aside>
   );
 };

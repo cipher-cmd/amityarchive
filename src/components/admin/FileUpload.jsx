@@ -1,66 +1,42 @@
 import React, { useState } from 'react';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { signInAnonymously } from 'firebase/auth';
-import { storage, auth } from '../../services/firebase.config';
+import { storage } from '../../services/firebase.config';
 import { addFile } from '../../services/database';
+import { COURSES, DOMAINS, YEARS } from '../../constants';
+import { useToast } from '../../context/ToastContext';
 
 const FileUpload = ({ onUploadSuccess }) => {
   const [file, setFile] = useState(null);
+  // Default the dropdowns to empty strings
   const [formData, setFormData] = useState({
     title: '',
-    subject: 'Applied Science',
-    domain: 'ASET',
-    year: '2024',
+    subject: '',
+    domain: '',
+    year: '',
   });
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [showUpload, setShowUpload] = useState(false);
   const [error, setError] = useState('');
+  const { showToast } = useToast();
 
-  const subjects = [
-    'Applied Science',
-    'Commerce',
-    'Computer Science/IT',
-    'Engineering',
-    'English Literature',
-    'Fashion',
-    'Management',
-    'Skill Development',
-    'Social Science',
-    'Finance',
-    'Psychology & Behavioural Science',
-    'Pharmacy',
-  ];
-
-  const authenticateUser = async () => {
-    try {
-      if (!auth.currentUser) {
-        await signInAnonymously(auth);
-        console.log('User authenticated anonymously');
-      }
-    } catch (error) {
-      console.error('Authentication failed:', error);
-      // Don't throw error for now - let upload proceed
-      console.warn('Proceeding without authentication');
-    }
-  };
+  const labelClasses = 'block mb-2 text-sm font-semibold text-gray-700';
+  const inputClasses =
+    'w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!file || !formData.title.trim()) {
-      setError('Please fill in all fields and select a file');
+      showToast('Please fill in the title and select a file.', 'error');
       return;
     }
-
-    // File type validation
+    // ... (rest of the validation logic) ...
     if (file.type !== 'application/pdf') {
-      setError('Please select a PDF file only');
+      setError('Please select a PDF file only.');
       return;
     }
-
-    // File size validation (10MB limit)
     if (file.size > 10 * 1024 * 1024) {
-      setError('File size exceeds the 10MB limit');
+      setError('File size exceeds the 10MB limit.');
       return;
     }
 
@@ -69,36 +45,26 @@ const FileUpload = ({ onUploadSuccess }) => {
     setError('');
 
     try {
-      // TEMPORARILY COMMENT OUT AUTHENTICATION
-      // await authenticateUser();
-
       const timestamp = Date.now();
       const fileName = `${timestamp}_${file.name}`;
       const storageRef = ref(storage, `files/${fileName}`);
-
-      // Create upload task with progress tracking
       const uploadTask = uploadBytesResumable(storageRef, file);
 
       uploadTask.on(
         'state_changed',
         (snapshot) => {
-          // Progress tracking
           const progress =
             (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
           setUploadProgress(Math.round(progress));
         },
-        (error) => {
-          console.error('Upload error:', error);
-          setError(`Upload failed: ${error.message}`);
+        (uploadError) => {
+          console.error('Upload error:', uploadError);
+          showToast(`Upload failed: ${uploadError.message}`, 'error');
           setUploading(false);
-          setUploadProgress(0);
         },
         async () => {
-          // Upload completed successfully
           try {
             const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-
-            // Save file info to Firestore
             await addFile({
               ...formData,
               titleLowerCase: formData.title.toLowerCase(),
@@ -107,53 +73,37 @@ const FileUpload = ({ onUploadSuccess }) => {
               fileSize: file.size,
             });
 
-            // Success notification
-            setError('');
-            alert('File uploaded successfully!');
-
-            // Reset form
+            showToast('File uploaded successfully!', 'success');
             setFile(null);
             setFormData({
               title: '',
-              subject: 'Applied Science',
-              domain: 'ASET',
-              year: '2024',
+              subject: '',
+              domain: '',
+              year: '',
             });
-            setUploadProgress(0);
             setShowUpload(false);
-
             if (onUploadSuccess) onUploadSuccess();
-          } catch (error) {
-            console.error('Database save error:', error);
-            setError(`Failed to save file info: ${error.message}`);
+          } catch (dbError) {
+            console.error('Database save error:', dbError);
+            showToast(`Failed to save file info: ${dbError.message}`, 'error');
           } finally {
             setUploading(false);
           }
         }
       );
-    } catch (error) {
-      console.error('Upload initialization error:', error);
-      setError(`Upload failed: ${error.message}`);
+    } catch (initError) {
+      console.error('Upload initialization error:', initError);
+      showToast(`Upload failed: ${initError.message}`, 'error');
       setUploading(false);
-      setUploadProgress(0);
     }
   };
 
   if (!showUpload) {
     return (
-      <div style={{ marginBottom: '20px' }}>
+      <div className="text-center mb-8">
         <button
           onClick={() => setShowUpload(true)}
-          style={{
-            padding: '12px 24px',
-            backgroundColor: '#27ae60',
-            color: 'white',
-            border: 'none',
-            borderRadius: '6px',
-            cursor: 'pointer',
-            fontSize: '16px',
-            fontWeight: 'bold',
-          }}
+          className="bg-green-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-600 transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-1"
         >
           + Upload New File
         </button>
@@ -162,285 +112,149 @@ const FileUpload = ({ onUploadSuccess }) => {
   }
 
   return (
-    <div
-      style={{
-        backgroundColor: '#f8f9fa',
-        padding: '25px',
-        borderRadius: '8px',
-        marginBottom: '30px',
-        border: '2px solid #e9ecef',
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '20px',
-        }}
-      >
-        <h3 style={{ color: '#2c3e50', margin: 0 }}>Upload New File</h3>
+    <div className="bg-white border-2 border-dashed border-gray-300 p-6 rounded-lg mb-8">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-xl font-bold text-gray-800">Upload New File</h3>
         <button
-          onClick={() => {
-            setShowUpload(false);
-            setUploadProgress(0);
-            setError('');
-          }}
-          style={{
-            padding: '5px 10px',
-            backgroundColor: '#e74c3c',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-          }}
+          onClick={() => setShowUpload(false)}
+          className="text-gray-500 hover:text-gray-800 transition-colors"
         >
-          Cancel
+          &times;
         </button>
       </div>
 
-      {/* Error Display */}
       {error && (
-        <div
-          style={{
-            backgroundColor: '#f8d7da',
-            color: '#721c24',
-            padding: '10px',
-            borderRadius: '4px',
-            marginBottom: '15px',
-            border: '1px solid #f5c6cb',
-          }}
-        >
+        <p className="bg-red-100 text-red-700 p-3 rounded-md mb-4 text-sm">
           {error}
-        </div>
+        </p>
       )}
 
-      {/* Progress Bar */}
       {uploading && (
-        <div style={{ marginBottom: '20px' }}>
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              marginBottom: '5px',
-            }}
-          >
-            <span style={{ fontSize: '14px', color: '#2c3e50' }}>
+        <div className="mb-4">
+          <div className="flex justify-between mb-1">
+            <span className="text-sm font-semibold text-primary-700">
               Upload Progress
             </span>
-            <span style={{ fontSize: '14px', color: '#2c3e50' }}>
+            <span className="text-sm font-semibold text-primary-700">
               {uploadProgress}%
             </span>
           </div>
-          <div
-            style={{
-              width: '100%',
-              height: '8px',
-              backgroundColor: '#ecf0f1',
-              borderRadius: '4px',
-              overflow: 'hidden',
-            }}
-          >
+          <div className="w-full bg-gray-200 rounded-full h-2.5">
             <div
-              style={{
-                width: `${uploadProgress}%`,
-                height: '100%',
-                backgroundColor: '#3498db',
-                transition: 'width 0.3s ease',
-                borderRadius: '4px',
-              }}
+              className="bg-primary-600 h-2.5 rounded-full transition-all duration-300"
+              style={{ width: `${uploadProgress}%` }}
             ></div>
           </div>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '15px' }}>
+      <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label
-            style={{
-              display: 'block',
-              marginBottom: '5px',
-              fontWeight: 'bold',
-              color: '#2c3e50',
-            }}
-          >
+          <label htmlFor="title" className={labelClasses}>
             File Title *
           </label>
           <input
+            id="title"
             type="text"
-            placeholder="e.g., Data Structures Mid-Term Exam 2024"
+            placeholder="e.g., Data Structures Mid-Term Exam"
             value={formData.title}
             onChange={(e) =>
               setFormData({ ...formData, title: e.target.value })
             }
-            style={{
-              width: '100%',
-              padding: '10px',
-              border: '1px solid #ddd',
-              borderRadius: '4px',
-              fontSize: '14px',
-            }}
+            className={inputClasses}
             required
             disabled={uploading}
           />
         </div>
 
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr 1fr',
-            gap: '15px',
-          }}
-        >
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label
-              style={{
-                display: 'block',
-                marginBottom: '5px',
-                fontWeight: 'bold',
-                color: '#2c3e50',
-              }}
-            >
-              Subject *
+            <label htmlFor="course" className={labelClasses}>
+              Course (Optional)
             </label>
             <select
+              id="course"
               value={formData.subject}
               onChange={(e) =>
                 setFormData({ ...formData, subject: e.target.value })
               }
-              style={{
-                width: '100%',
-                padding: '10px',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-                fontSize: '14px',
-              }}
-              required
+              className={inputClasses}
               disabled={uploading}
             >
-              {subjects.map((subject) => (
-                <option key={subject} value={subject}>
-                  {subject}
+              <option value="">Select a Course</option>
+              {COURSES.map((course) => (
+                <option key={course} value={course}>
+                  {course}
                 </option>
               ))}
             </select>
           </div>
-
           <div>
-            <label
-              style={{
-                display: 'block',
-                marginBottom: '5px',
-                fontWeight: 'bold',
-                color: '#2c3e50',
-              }}
-            >
-              Domain *
+            <label htmlFor="domain" className={labelClasses}>
+              Domain (Optional)
             </label>
             <select
+              id="domain"
               value={formData.domain}
               onChange={(e) =>
                 setFormData({ ...formData, domain: e.target.value })
               }
-              style={{
-                width: '100%',
-                padding: '10px',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-                fontSize: '14px',
-              }}
-              required
+              className={inputClasses}
               disabled={uploading}
             >
-              <option value="ALLIED">ALLIED</option>
-              <option value="ASET">ASET</option>
-              <option value="MGMT">MGMT</option>
-              <option value="DIP">DIP</option>
+              <option value="">Select a Domain</option>
+              {DOMAINS.map((domain) => (
+                <option key={domain.name} value={domain.name}>
+                  {domain.name}
+                </option>
+              ))}
             </select>
           </div>
-
           <div>
-            <label
-              style={{
-                display: 'block',
-                marginBottom: '5px',
-                fontWeight: 'bold',
-                color: '#2c3e50',
-              }}
-            >
-              Year *
+            <label htmlFor="year" className={labelClasses}>
+              Year (Optional)
             </label>
             <select
+              id="year"
               value={formData.year}
               onChange={(e) =>
                 setFormData({ ...formData, year: e.target.value })
               }
-              style={{
-                width: '100%',
-                padding: '10px',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-                fontSize: '14px',
-              }}
-              required
+              className={inputClasses}
               disabled={uploading}
             >
-              <option value="2022">2022</option>
-              <option value="2023">2023</option>
-              <option value="2024">2024</option>
-              <option value="2025">2025</option>
+              <option value="">Select a Year</option>
+              {YEARS.map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
             </select>
           </div>
         </div>
 
         <div>
-          <label
-            style={{
-              display: 'block',
-              marginBottom: '5px',
-              fontWeight: 'bold',
-              color: '#2c3e50',
-            }}
-          >
+          <label htmlFor="file" className={labelClasses}>
             Select PDF File *
           </label>
           <input
+            id="file"
             type="file"
             accept=".pdf"
-            onChange={(e) => {
-              setFile(e.target.files[0]);
-              setError(''); // Clear error when new file is selected
-            }}
-            style={{
-              width: '100%',
-              padding: '10px',
-              border: '1px solid #ddd',
-              borderRadius: '4px',
-              fontSize: '14px',
-            }}
+            onChange={(e) => setFile(e.target.files[0])}
+            className={`${inputClasses} file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100`}
             required
             disabled={uploading}
           />
           {file && (
-            <p style={{ marginTop: '5px', fontSize: '12px', color: '#7f8c8d' }}>
-              Selected: {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
-            </p>
+            <p className="mt-2 text-xs text-gray-500">Selected: {file.name}</p>
           )}
         </div>
 
         <button
           type="submit"
           disabled={uploading || !file || !formData.title.trim()}
-          style={{
-            padding: '12px 24px',
-            backgroundColor: uploading ? '#95a5a6' : '#27ae60',
-            color: 'white',
-            border: 'none',
-            borderRadius: '6px',
-            cursor: uploading ? 'not-allowed' : 'pointer',
-            fontSize: '16px',
-            fontWeight: 'bold',
-          }}
+          className="w-full bg-primary-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-primary-700 transition-all duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed"
         >
           {uploading ? `Uploading... ${uploadProgress}%` : 'Upload File'}
         </button>

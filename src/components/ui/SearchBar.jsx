@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { db } from '../../services/firebase.config';
+import { useToast } from '../../context/ToastContext';
 
 const SearchBar = ({ onSearchResults }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -9,7 +10,7 @@ const SearchBar = ({ onSearchResults }) => {
   const [loading, setLoading] = useState(false);
   const [recentSearches, setRecentSearches] = useState([]);
   const searchRef = useRef(null);
-  const suggestionsRef = useRef(null);
+  const { showToast } = useToast();
 
   // Load recent searches from localStorage on component mount
   useEffect(() => {
@@ -27,90 +28,43 @@ const SearchBar = ({ onSearchResults }) => {
   // Close suggestions when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (
-        searchRef.current &&
-        !searchRef.current.contains(event.target) &&
-        suggestionsRef.current &&
-        !suggestionsRef.current.contains(event.target)
-      ) {
+      if (searchRef.current && !searchRef.current.contains(event.target)) {
         setShowSuggestions(false);
       }
     };
-
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Fetch search suggestions based on input
-  const fetchSuggestions = async (term) => {
-    if (term.length < 2) {
-      setSuggestions([]);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const suggestions = [];
-
-      // Search in titles (case-insensitive)
-      const titleQuery = query(
-        collection(db, 'files'),
-        where('titleLowerCase', '>=', term.toLowerCase()),
-        where('titleLowerCase', '<=', term.toLowerCase() + '\uf8ff'),
-        limit(5)
-      );
-
-      const titleSnapshot = await getDocs(titleQuery);
-      titleSnapshot.forEach((doc) => {
-        const data = doc.data();
-        suggestions.push({
-          id: doc.id,
-          type: 'title',
-          text: data.title,
-          subject: data.subject,
-          year: data.year,
-          domain: data.domain,
-          ...data,
-        });
-      });
-
-      // Search in subjects (if no title matches)
-      if (suggestions.length < 3) {
-        const subjectQuery = query(
-          collection(db, 'files'),
-          where('subject', '>=', term),
-          where('subject', '<=', term + '\uf8ff'),
-          limit(3)
-        );
-
-        const subjectSnapshot = await getDocs(subjectQuery);
-        subjectSnapshot.forEach((doc) => {
-          const data = doc.data();
-          if (!suggestions.find((s) => s.id === doc.id)) {
-            suggestions.push({
-              id: doc.id,
-              type: 'subject',
-              text: data.subject,
-              title: data.title,
-              year: data.year,
-              domain: data.domain,
-              ...data,
-            });
-          }
-        });
-      }
-
-      setSuggestions(suggestions.slice(0, 6)); // Limit to 6 suggestions
-    } catch (error) {
-      console.error('Error fetching suggestions:', error);
-      setSuggestions([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Handle input change with debouncing
+  // Fetch search suggestions with debouncing
   useEffect(() => {
+    const fetchSuggestions = async (term) => {
+      if (term.length < 2) {
+        setSuggestions([]);
+        return;
+      }
+      setLoading(true);
+      try {
+        const titleQuery = query(
+          collection(db, 'files'),
+          where('titleLowerCase', '>=', term.toLowerCase()),
+          where('titleLowerCase', '<=', term.toLowerCase() + '\uf8ff'),
+          limit(6)
+        );
+        const snapshot = await getDocs(titleQuery);
+        const fetchedSuggestions = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setSuggestions(fetchedSuggestions);
+      } catch (error) {
+        showToast('Error fetching search suggestions.', 'error');
+        console.error('Error fetching suggestions:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     const timeoutId = setTimeout(() => {
       if (searchTerm.trim()) {
         fetchSuggestions(searchTerm.trim());
@@ -137,272 +91,123 @@ const SearchBar = ({ onSearchResults }) => {
     );
   };
 
-  // Perform actual search
+  // Perform the actual search
   const performSearch = async (term) => {
     if (!term.trim()) return;
-
+    setLoading(true);
+    saveRecentSearch(term.trim());
     try {
-      setLoading(true);
-      saveRecentSearch(term.trim());
-
-      // Search in multiple fields
-      const searchResults = [];
-      const searchTermLower = term.toLowerCase();
-
-      // Search by title
-      const titleQuery = query(
+      const q = query(
         collection(db, 'files'),
-        where('titleLowerCase', '>=', searchTermLower),
-        where('titleLowerCase', '<=', searchTermLower + '\uf8ff')
+        where('titleLowerCase', '>=', term.toLowerCase()),
+        where('titleLowerCase', '<=', term.toLowerCase() + '\uf8ff')
       );
-
-      const titleSnapshot = await getDocs(titleQuery);
-      titleSnapshot.forEach((doc) => {
-        searchResults.push({ id: doc.id, ...doc.data() });
-      });
-
-      // Search by subject (if not enough results)
-      if (searchResults.length < 10) {
-        const subjectQuery = query(
-          collection(db, 'files'),
-          where('subject', '==', term)
-        );
-
-        const subjectSnapshot = await getDocs(subjectQuery);
-        subjectSnapshot.forEach((doc) => {
-          if (!searchResults.find((r) => r.id === doc.id)) {
-            searchResults.push({ id: doc.id, ...doc.data() });
-          }
-        });
-      }
-
-      onSearchResults(searchResults);
-      setShowSuggestions(false);
+      const snapshot = await getDocs(q);
+      const results = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      onSearchResults(results);
     } catch (error) {
+      showToast('Error performing search.', 'error');
       console.error('Search error:', error);
       onSearchResults([]);
     } finally {
       setLoading(false);
+      setShowSuggestions(false);
     }
   };
 
-  // Handle form submission
   const handleSubmit = (e) => {
     e.preventDefault();
     performSearch(searchTerm);
   };
 
-  // Handle suggestion click
   const handleSuggestionClick = (suggestion) => {
-    setSearchTerm(suggestion.text);
-    performSearch(suggestion.text);
+    setSearchTerm(suggestion.title);
+    performSearch(suggestion.title);
   };
 
-  // Handle recent search click
   const handleRecentSearchClick = (term) => {
     setSearchTerm(term);
     performSearch(term);
   };
 
   return (
-    <div
-      className="search-container"
-      style={{ position: 'relative', maxWidth: '600px', margin: '0 auto' }}
-    >
-      <form onSubmit={handleSubmit} className="search-form">
-        <div className="search-input-wrapper" style={{ position: 'relative' }}>
+    <div className="relative w-full" ref={searchRef}>
+      <form onSubmit={handleSubmit}>
+        <div className="relative">
+          {/* Search Icon */}
+          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+            <svg
+              className="h-5 w-5 text-gray-400"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fillRule="evenodd"
+                d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </div>
           <input
-            ref={searchRef}
             type="text"
             placeholder="Search for files, subjects, or topics..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            onFocus={() => {
-              if (suggestions.length > 0 || recentSearches.length > 0) {
-                setShowSuggestions(true);
-              }
-            }}
-            className="search-input"
-            style={{
-              width: '100%',
-              padding: '12px 50px 12px 16px',
-              border: '2px solid #e1e5e9',
-              borderRadius: '25px',
-              fontSize: '16px',
-              outline: 'none',
-              transition: 'all 0.3s ease',
-              boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-            }}
+            onFocus={() => setShowSuggestions(true)}
+            className="w-full py-4 pl-12 pr-4 text-gray-900 bg-gray-50 border-2 border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all shadow-inner"
           />
-
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              position: 'absolute',
-              right: '8px',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              background: '#3498db',
-              border: 'none',
-              borderRadius: '50%',
-              width: '36px',
-              height: '36px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'white',
-              fontSize: '16px',
-            }}
-          >
-            {loading ? '⏳' : '🔍'}
-          </button>
         </div>
       </form>
 
       {/* Suggestions Dropdown */}
       {showSuggestions && (
-        <div
-          ref={suggestionsRef}
-          style={{
-            position: 'absolute',
-            top: '100%',
-            left: 0,
-            right: 0,
-            backgroundColor: 'white',
-            border: '1px solid #e1e5e9',
-            borderRadius: '12px',
-            boxShadow: '0 8px 25px rgba(0,0,0,0.15)',
-            zIndex: 1000,
-            maxHeight: '400px',
-            overflowY: 'auto',
-            marginTop: '8px',
-          }}
-        >
-          {/* Recent Searches */}
-          {searchTerm.length === 0 && recentSearches.length > 0 && (
-            <div>
-              <div
-                style={{
-                  padding: '12px 16px',
-                  borderBottom: '1px solid #f0f0f0',
-                  fontSize: '12px',
-                  color: '#666',
-                  fontWeight: 'bold',
-                }}
-              >
-                RECENT SEARCHES
-              </div>
-              {recentSearches.map((term, index) => (
-                <div
-                  key={index}
-                  onClick={() => handleRecentSearchClick(term)}
-                  style={{
-                    padding: '12px 16px',
-                    cursor: 'pointer',
-                    borderBottom: '1px solid #f8f9fa',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    transition: 'background-color 0.2s ease',
-                  }}
-                  onMouseEnter={(e) =>
-                    (e.target.style.backgroundColor = '#f8f9fa')
-                  }
-                  onMouseLeave={(e) =>
-                    (e.target.style.backgroundColor = 'transparent')
-                  }
-                >
-                  <span style={{ color: '#999' }}>🕒</span>
-                  <span>{term}</span>
-                </div>
-              ))}
+        <div className="absolute mt-2 w-full bg-white rounded-lg shadow-xl z-10 overflow-hidden border border-gray-100">
+          {loading && (
+            <div className="p-4 text-sm text-gray-500">Searching...</div>
+          )}
+          {!loading && searchTerm.length > 0 && suggestions.length === 0 && (
+            <div className="p-4 text-sm text-gray-500">
+              No suggestions found.
             </div>
           )}
-
-          {/* Search Suggestions */}
-          {suggestions.length > 0 && (
-            <div>
-              {searchTerm.length > 0 && (
-                <div
-                  style={{
-                    padding: '12px 16px',
-                    borderBottom: '1px solid #f0f0f0',
-                    fontSize: '12px',
-                    color: '#666',
-                    fontWeight: 'bold',
-                  }}
-                >
-                  SUGGESTIONS
-                </div>
-              )}
-              {suggestions.map((suggestion, index) => (
-                <div
+          {!loading && suggestions.length > 0 && (
+            <ul>
+              {suggestions.map((suggestion) => (
+                <li
                   key={suggestion.id}
                   onClick={() => handleSuggestionClick(suggestion)}
-                  style={{
-                    padding: '12px 16px',
-                    cursor: 'pointer',
-                    borderBottom:
-                      index < suggestions.length - 1
-                        ? '1px solid #f8f9fa'
-                        : 'none',
-                    transition: 'background-color 0.2s ease',
-                  }}
-                  onMouseEnter={(e) =>
-                    (e.target.style.backgroundColor = '#f8f9fa')
-                  }
-                  onMouseLeave={(e) =>
-                    (e.target.style.backgroundColor = 'transparent')
-                  }
+                  className="p-4 hover:bg-primary-50 cursor-pointer border-b border-gray-100"
                 >
-                  <div
-                    style={{
-                      fontWeight: '500',
-                      color: '#2c3e50',
-                      marginBottom: '4px',
-                    }}
-                  >
-                    {suggestion.type === 'title'
-                      ? suggestion.text
-                      : suggestion.title}
-                  </div>
-                  <div style={{ fontSize: '12px', color: '#7f8c8d' }}>
-                    {suggestion.subject} • {suggestion.year} •{' '}
-                    {suggestion.domain}
-                    {suggestion.type === 'subject' && (
-                      <span> • Subject Match</span>
-                    )}
-                  </div>
-                </div>
+                  <p className="font-semibold text-gray-800">
+                    {suggestion.title}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {suggestion.subject} - {suggestion.year}
+                  </p>
+                </li>
               ))}
-            </div>
+            </ul>
           )}
-
-          {/* No Results */}
-          {searchTerm.length > 0 && suggestions.length === 0 && !loading && (
-            <div
-              style={{
-                padding: '20px 16px',
-                textAlign: 'center',
-                color: '#7f8c8d',
-              }}
-            >
-              No suggestions found for "{searchTerm}"
-            </div>
-          )}
-
-          {/* Loading */}
-          {loading && (
-            <div
-              style={{
-                padding: '20px 16px',
-                textAlign: 'center',
-                color: '#7f8c8d',
-              }}
-            >
-              Searching...
+          {!loading && searchTerm.length === 0 && recentSearches.length > 0 && (
+            <div>
+              <h4 className="text-xs font-bold text-gray-500 uppercase p-3 border-b border-gray-100">
+                Recent Searches
+              </h4>
+              <ul>
+                {recentSearches.map((term, index) => (
+                  <li
+                    key={index}
+                    onClick={() => handleRecentSearchClick(term)}
+                    className="p-3 hover:bg-primary-50 cursor-pointer text-sm text-gray-700"
+                  >
+                    {term}
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
         </div>

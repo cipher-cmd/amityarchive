@@ -45,37 +45,21 @@ const Pagination = ({
   if (totalPages <= 1) return null;
 
   const startItem = (currentPage - 1) * itemsPerPage + 1;
-  const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+  const endItem = Math.min(currentPage * itemsPerPage, totalItems); // Corrected to use totalItems
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginTop: '30px',
-        padding: '20px 0',
-        borderTop: '1px solid #ecf0f1',
-      }}
-    >
-      <div style={{ fontSize: '14px', color: '#7f8c8d' }}>
+    <div className="flex justify-between items-center mt-8 pt-5 border-t border-gray-200">
+      <div className="text-sm text-gray-600">
         Showing {startItem}-{endItem} of {totalItems} files
       </div>
 
-      <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
+      <div className="flex items-center space-x-2">
         {/* Previous Button */}
         <button
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          style={{
-            padding: '8px 12px',
-            border: '1px solid #ddd',
-            backgroundColor: currentPage === 1 ? '#f8f9fa' : 'white',
-            color: currentPage === 1 ? '#bdc3c7' : '#2c3e50',
-            borderRadius: '4px',
-            cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-            fontSize: '14px',
-          }}
+          className={`px-4 py-2 border border-gray-300 rounded-md text-sm font-medium transition-colors duration-200
+            ${currentPage === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
         >
           Previous
         </button>
@@ -86,22 +70,15 @@ const Pagination = ({
             key={index}
             onClick={() => typeof page === 'number' && onPageChange(page)}
             disabled={page === '...'}
-            style={{
-              padding: '8px 12px',
-              border: '1px solid #ddd',
-              backgroundColor: page === currentPage ? '#3498db' : 'white',
-              color:
-                page === currentPage
-                  ? 'white'
-                  : page === '...'
-                  ? '#bdc3c7'
-                  : '#2c3e50',
-              borderRadius: '4px',
-              cursor:
-                page === '...' || page === currentPage ? 'default' : 'pointer',
-              fontSize: '14px',
-              minWidth: '40px',
-            }}
+            className={`px-4 py-2 border border-gray-300 rounded-md text-sm font-medium min-w-[40px] transition-colors duration-200
+              ${page === currentPage
+                ? 'bg-primary-600 text-white border-primary-600'
+                : page === '...'
+                ? 'bg-white text-gray-400 cursor-default'
+                : 'bg-white text-gray-700 hover:bg-gray-50'
+              }
+              ${page === '...' || page === currentPage ? 'cursor-default' : 'cursor-pointer'}
+            `}
           >
             {page}
           </button>
@@ -110,16 +87,9 @@ const Pagination = ({
         {/* Next Button */}
         <button
           onClick={() => onPageChange(currentPage + 1)}
-          disabled={currentPage === totalPages}
-          style={{
-            padding: '8px 12px',
-            border: '1px solid #ddd',
-            backgroundColor: currentPage === totalPages ? '#f8f9fa' : 'white',
-            color: currentPage === totalPages ? '#bdc3c7' : '#2c3e50',
-            borderRadius: '4px',
-            cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
-            fontSize: '14px',
-          }}
+          disabled={currentPage === totalPages} // Corrected to use totalPages
+          className={`px-4 py-2 border border-gray-300 rounded-md text-sm font-medium transition-colors duration-200
+            ${currentPage === totalPages ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
         >
           Next
         </button>
