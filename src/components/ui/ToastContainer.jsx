@@ -5,6 +5,7 @@ import { useToast } from '../../context/ToastContext';
 const Toast = ({ message, type, onClose }) => {
   const baseClasses =
     'flex items-center justify-between w-full max-w-xs p-4 my-2 text-white rounded-lg shadow-lg animate-fade-in';
+  // The variable is named iconTypeClasses
   const iconTypeClasses = {
     success: 'text-green-500',
     error: 'text-red-500',
@@ -16,7 +17,8 @@ const Toast = ({ message, type, onClose }) => {
       return (
         // Success icon
         <svg
-          className={`w-6 h-6 ${typeClasses[type]}`}
+          // Corrected variable name
+          className={`w-6 h-6 ${iconTypeClasses[type]}`}
           fill="currentColor"
           viewBox="0 0 20 20"
         >
@@ -31,7 +33,8 @@ const Toast = ({ message, type, onClose }) => {
       return (
         // Error icon
         <svg
-          className={`w-6 h-6 ${typeClasses[type]}`}
+          // Corrected variable name
+          className={`w-6 h-6 ${iconTypeClasses[type]}`}
           fill="currentColor"
           viewBox="0 0 20 20"
         >
@@ -44,7 +47,8 @@ const Toast = ({ message, type, onClose }) => {
       );
     return (
       <svg // Info icon (default)
-        className={`w-6 h-6 ${typeClasses[type]}`}
+        // Corrected variable name
+        className={`w-6 h-6 ${iconTypeClasses[type]}`}
         fill="currentColor"
         viewBox="0 0 20 20"
       >
