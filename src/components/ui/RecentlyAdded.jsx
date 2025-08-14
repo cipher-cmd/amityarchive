@@ -43,7 +43,7 @@ const RecentlyAdded = () => {
       }
     };
     fetchRecentFiles();
-  }, []);
+  }, [showToast]);
 
   // This function will handle the click event on a card
   const handleFileClick = (file) => {

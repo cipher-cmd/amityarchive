@@ -6,7 +6,6 @@ import {
   where,
   orderBy,
   limit,
-  startAfter,
   serverTimestamp,
   doc,
   updateDoc,

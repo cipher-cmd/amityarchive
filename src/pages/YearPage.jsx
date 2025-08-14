@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { getFilesByField, deleteFile } from '../services/database';
 import { useAuth } from '../context/AuthContext';
@@ -11,7 +11,7 @@ const YearPage = () => {
   const { currentUser } = useAuth();
   const { showToast } = useToast();
 
-  const fetchYearFiles = async () => {
+  const fetchYearFiles = useCallback(async () => {
     setLoading(true);
     try {
       const fileData = await getFilesByField('year', year);
@@ -21,11 +21,11 @@ const YearPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [year]);
 
   useEffect(() => {
     fetchYearFiles();
-  }, [year]);
+  }, [fetchYearFiles]);
 
   const handleDelete = async (fileToDelete) => {
     if (

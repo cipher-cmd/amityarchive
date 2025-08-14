@@ -76,7 +76,7 @@ const SearchBar = ({ onSearchResults }) => {
     }, 300); // 300ms debounce
 
     return () => clearTimeout(timeoutId);
-  }, [searchTerm]);
+  }, [searchTerm, showToast]);
 
   // Save search term to recent searches
   const saveRecentSearch = (term) => {

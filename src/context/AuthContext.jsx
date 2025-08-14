@@ -42,7 +42,7 @@ export const AuthProvider = ({ children }) => {
 
     return unsubscribe;
     // By using an empty dependency array, we ensure this effect only runs once.
-  }, []);
+  }, [auth]);
 
   const value = {
     currentUser,

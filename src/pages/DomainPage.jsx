@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { getFilesByField, deleteFile } from '../services/database';
 import { useAuth } from '../context/AuthContext';
@@ -12,7 +12,7 @@ const DomainPage = () => {
   const { showToast } = useToast(); // Get the showToast function
 
   // We need a function to re-fetch the files, which we can call after deleting one.
-  const fetchDomainFiles = async () => {
+  const fetchDomainFiles = useCallback(async () => {
     setLoading(true);
     try {
       const fileData = await getFilesByField('domain', domainId.toUpperCase());
@@ -22,11 +22,11 @@ const DomainPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [domainId]);
 
   useEffect(() => {
     fetchDomainFiles();
-  }, [domainId]);
+  }, [domainId, fetchDomainFiles]);
 
   // Function to handle file deletion
   const handleDelete = async (fileToDelete) => {
